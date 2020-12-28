@@ -16,14 +16,17 @@ class Huobi:
     async def _send(self, data: dict):
         await self.websocket.send(json.dumps(data))
 
-    async def _recv(self) -> dict:
-        res = await self.websocket.recv()
+    async def _recv(self, timeout=None) -> dict:
+        if timeout is None:
+            res = await self.websocket.recv()
+        else:
+            res = await asyncio.wait_for(self.websocket.recv(), timeout=timeout)
         res_dict = self._decode(res)
         res_dict_or_None = await self._pingpong(res_dict)
         if res_dict_or_None is not None:
             return res_dict_or_None
 
-        return await self._recv()
+        return await self._recv(timeout=timeout)
 
     async def _pingpong(self, data: dict) -> Optional[dict]:
         if 'ping' in data:
@@ -39,8 +42,8 @@ class Huobi:
         res = await self._recv()
         assert res["status"] == "ok", res["status"]
 
-    async def recv_price(self):
-        res = await self._recv()
+    async def recv_price(self, timeout=None):
+        res = await self._recv(timeout=timeout)
         return res['tick']['data'][0]['price']
 
 
