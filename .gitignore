@@ -1,0 +1,9 @@
+!.gitkeep
+__pycache__/
+.vscode
+*.egg-info/
+/build
+/dist
+.env
+tmp/
+nohup.out
