@@ -22,6 +22,11 @@ class Huobi:
         else:
             res = await asyncio.wait_for(self.websocket.recv(), timeout=timeout)
         res_dict = self._decode(res)
+
+        if "status" in res_dict:
+            assert res_dict["status"] == "ok", res_dict["status"]
+            return await self._recv(timeout=timeout)
+
         res_dict_or_None = await self._pingpong(res_dict)
         if res_dict_or_None is not None:
             return res_dict_or_None
@@ -38,18 +43,21 @@ class Huobi:
 
     async def _connect(self):
         self.websocket = await websockets.connect(self.uri)
-        await self._send({"sub": "market.btcusdt.trade.detail", "id": 'whatever'})
-        res = await self._recv()
-        assert res["status"] == "ok", res["status"]
+
+    async def _sub(self, market="btcusdt"):
+        await self._send({"sub": f"market.{market}.trade.detail", "id": market})
 
     async def recv_price(self, timeout=None):
         res = await self._recv(timeout=timeout)
-        return res['tick']['data'][0]['price']
+        market = res['ch'].replace('market.', '').replace('.trade.detail', '')
+        return market, res['tick']['data'][0]['price']
 
 
 async def main():
     hb = Huobi()
     await hb._connect()
+    await hb._sub('btcusdt')
+    await hb._sub('ethusdt')
     while True:
         print(f"{await hb.recv_price()}\r", end='', flush=False)
 
