@@ -4,10 +4,8 @@ from ws_coin import Huobi
 
 
 def to_bytes(line1=' ' * 16, line2=' ' * 16):
-    assert isinstance(line1, str) and isinstance(
-        line2, str
-    ), f"{len(line1) =}, {len(line2) =}"
-    assert len(line1) == 16 and len(line2) == 16
+    assert isinstance(line1, str) and isinstance(line2, str)
+    assert len(line1) == 16 and len(line2) == 16, f"{len(line1) =}, {len(line2) =}"
     return b'\xfeH' + line1.encode() + b'\x00\x00\x00\x00' + line2.encode() + b'\xff'
 
 
