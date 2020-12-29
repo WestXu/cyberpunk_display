@@ -34,10 +34,8 @@ class Coin:
 
 
 async def main():
-    hb = Huobi()
+    hb = Huobi(markets=['btcusdt', 'ethusdt'])
     await hb._connect()
-    await hb._sub('btcusdt')
-    await hb._sub('ethusdt')
 
     btc = Coin('btcusdt', 'BTC')
     eth = Coin('ethusdt', 'ETH')

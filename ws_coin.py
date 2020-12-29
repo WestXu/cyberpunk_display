@@ -1,13 +1,16 @@
 import asyncio
 import gzip
 import json
-from typing import Optional
+from typing import Optional, List
 
 import websockets
 
 
 class Huobi:
     uri = "wss://api.hadax.com/ws"
+
+    def __init__(self, markets: List[str]) -> None:
+        self.markets = markets
 
     @staticmethod
     def _decode(msg: bytes) -> dict:
@@ -17,21 +20,29 @@ class Huobi:
         await self.websocket.send(json.dumps(data))
 
     async def _recv(self, timeout=None) -> dict:
-        if timeout is None:
-            res = await self.websocket.recv()
-        else:
-            res = await asyncio.wait_for(self.websocket.recv(), timeout=timeout)
+        async def _retry():
+            return await self._recv(timeout=timeout)
+
+        try:
+            if timeout is None:
+                res = await self.websocket.recv()
+            else:
+                res = await asyncio.wait_for(self.websocket.recv(), timeout=timeout)
+        except websockets.ConnectionClosedError:
+            await self._connect()
+            return await _retry()
+
         res_dict = self._decode(res)
 
         if "status" in res_dict:
             assert res_dict["status"] == "ok", res_dict["status"]
-            return await self._recv(timeout=timeout)
+            return await _retry()
 
         res_dict_or_None = await self._pingpong(res_dict)
         if res_dict_or_None is not None:
             return res_dict_or_None
 
-        return await self._recv(timeout=timeout)
+        return await _retry()
 
     async def _pingpong(self, data: dict) -> Optional[dict]:
         if 'ping' in data:
@@ -43,9 +54,8 @@ class Huobi:
 
     async def _connect(self):
         self.websocket = await websockets.connect(self.uri)
-
-    async def _sub(self, market="btcusdt"):
-        await self._send({"sub": f"market.{market}.trade.detail", "id": market})
+        for market in self.markets:
+            await self._send({"sub": f"market.{market}.trade.detail", "id": market})
 
     async def recv_price(self, timeout=None):
         res = await self._recv(timeout=timeout)
@@ -54,10 +64,8 @@ class Huobi:
 
 
 async def main():
-    hb = Huobi()
+    hb = Huobi(markets=['btcusdt', 'ethusdt'])
     await hb._connect()
-    await hb._sub('btcusdt')
-    await hb._sub('ethusdt')
     while True:
         print(f"{await hb.recv_price()}\r", end='', flush=False)
 
