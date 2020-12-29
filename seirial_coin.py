@@ -1,7 +1,10 @@
 import asyncio
-import serial
-from ws_coin import Huobi
 from typing import Literal
+
+import serial
+from loguru import logger
+
+from ws_coin import Huobi
 
 
 def to_bytes(line1=' ' * 16, line2=' ' * 16):
@@ -46,7 +49,7 @@ async def main():
             except asyncio.TimeoutError:
                 continue
 
-            print(f"{market} {p}\r", end='', flush=True)
+            logger.info(f"{market} {p}")
 
             assert market in {'btcusdt', 'ethusdt'}, f"unknown market {market}"
             if market == 'btcusdt':
