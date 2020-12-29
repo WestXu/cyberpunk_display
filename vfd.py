@@ -34,11 +34,13 @@ class Coin:
 
 
 async def main():
-    hb = Huobi(markets=['btcusdt', 'ethusdt'])
-    await hb._connect()
+    coins = {
+        'btcusdt': Coin('btcusdt', 'BTC'),
+        'ethusdt': Coin('ethusdt', 'ETH'),
+    }
 
-    btc = Coin('btcusdt', 'BTC')
-    eth = Coin('ethusdt', 'ETH')
+    hb = Huobi(markets=list(coins.keys()))
+    await hb._connect()
 
     with serial.Serial('COM4') as ser:
         while True:
@@ -48,13 +50,14 @@ async def main():
             except asyncio.TimeoutError:
                 logger.warning('timeout')
             else:
-                assert market in {'btcusdt', 'ethusdt'}, f"unknown market {market}"
-                if market == 'btcusdt':
-                    btc.update(p)
-                else:
-                    eth.update(p)
+                coins[market].update(p)
             finally:
-                ser.write(to_bytes(btc.line, eth.line))
+                ser.write(
+                    to_bytes(
+                        coins['btcusdt'].line,
+                        coins['ethusdt'].line,
+                    )
+                )
 
 
 if __name__ == "__main__":
