@@ -44,18 +44,17 @@ async def main():
         while True:
             try:
                 market, p = await hb.recv_price(timeout=0.5)
+                logger.info(f"{market} {p}")
             except asyncio.TimeoutError:
-                continue
-
-            logger.info(f"{market} {p}")
-
-            assert market in {'btcusdt', 'ethusdt'}, f"unknown market {market}"
-            if market == 'btcusdt':
-                btc.update(p)
+                logger.warning('timeout')
             else:
-                eth.update(p)
-
-            ser.write(to_bytes(btc.line, eth.line))
+                assert market in {'btcusdt', 'ethusdt'}, f"unknown market {market}"
+                if market == 'btcusdt':
+                    btc.update(p)
+                else:
+                    eth.update(p)
+            finally:
+                ser.write(to_bytes(btc.line, eth.line))
 
 
 if __name__ == "__main__":
