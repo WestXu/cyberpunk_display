@@ -1,9 +1,10 @@
 import asyncio
 import gzip
 import json
-from typing import Optional, List
+from typing import List, Optional
 
 import websockets
+from loguru import logger
 
 
 class Huobi:
@@ -35,6 +36,7 @@ class Huobi:
             else:
                 res = await asyncio.wait_for(self.websocket.recv(), timeout=timeout)
         except websockets.ConnectionClosedError:
+            logger.warning(f'ConnectionClosedError recieving data, reconnecting...')
             await self._connect()
             return await _retry()
 
@@ -53,14 +55,17 @@ class Huobi:
     async def _pingpong(self, data: dict) -> Optional[dict]:
         if 'ping' in data:
             n = data['ping']
+            logger.info(f'Recieved ping {n}, sending pong...')
             await self._send({'pong': n})
             return None
 
         return data
 
     async def _connect(self):
+        logger.info(f'Connecting...')
         self.websocket = await websockets.connect(self.uri)
         for market in self.markets:
+            logger.info(f'subscribing {market}')
             await self._send({"sub": f"market.{market}.trade.detail", "id": market})
 
     async def recv_price(self, timeout=None):
