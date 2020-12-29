@@ -42,7 +42,7 @@ async def main():
     btc = Coin('btcusdt', 'BTC')
     eth = Coin('ethusdt', 'ETH')
 
-    with serial.Serial('COM3') as ser:
+    with serial.Serial('COM4') as ser:
         while True:
             try:
                 market, p = await hb.recv_price(timeout=0.5)
