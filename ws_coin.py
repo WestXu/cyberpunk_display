@@ -17,7 +17,13 @@ class Huobi:
         return json.loads(gzip.decompress(msg))
 
     async def _send(self, data: dict):
-        await self.websocket.send(json.dumps(data))
+        try:
+            await self.websocket.send(json.dumps(data))
+        except websockets.ConnectionClosedError:
+            logger.warning(
+                f'ConnectionClosedError sending data {data}, reconnecting...'
+            )
+            await self._connect()
 
     async def _recv(self, timeout=None) -> dict:
         async def _retry():
