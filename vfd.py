@@ -87,9 +87,10 @@ async def push(vfd: VFD):
 
 
 if __name__ == "__main__":
-    vfd = VFD(serial.Serial('COM4'))
+    with serial.Serial('COM4') as ser:
+        vfd = VFD(ser)
 
-    loop = asyncio.get_event_loop()
+        loop = asyncio.get_event_loop()
 
-    loop.create_task(data(vfd))
-    loop.run_until_complete(push(vfd))
+        loop.create_task(data(vfd))
+        loop.run_until_complete(push(vfd))
