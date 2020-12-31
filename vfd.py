@@ -33,7 +33,34 @@ class Coin:
         return f"{self.name}: {self.trend}{self.p:>10.2f}"
 
 
-async def main():
+class VFD:
+    def __init__(self, ser) -> None:
+        self.ser = ser
+
+        self._last_sent = to_bytes()
+        self._q = asyncio.Queue(maxsize=1)
+
+    async def update(self, msg: bytes):
+        if not self._q.empty():
+            await self._q.get()
+
+        await self._q.put(msg)
+
+    def send(self, msg: bytes):
+        self.ser.write(msg)
+        logger.info(f'Sent to VFD')
+
+    async def send_latest(self, timeout=0.5):
+        try:
+            msg = await asyncio.wait_for(self._q.get(), timeout)
+            self._last_sent = msg
+        except asyncio.TimeoutError:
+            msg = self._last_sent
+
+        self.send(msg)
+
+
+async def data(vfd: VFD):
     coins = {
         'btcusdt': Coin('btcusdt', 'BTC'),
         'ethusdt': Coin('ethusdt', 'ETH'),
@@ -42,23 +69,27 @@ async def main():
     hb = Huobi(markets=list(coins.keys()))
     await hb._connect()
 
-    with serial.Serial('COM4') as ser:
-        while True:
-            try:
-                market, p = await hb.recv_price(timeout=0.5)
-                logger.info(f"{market} {p}")
-            except asyncio.TimeoutError:
-                logger.warning('timeout')
-            else:
-                coins[market].update(p)
-            finally:
-                ser.write(
-                    to_bytes(
-                        coins['btcusdt'].line,
-                        coins['ethusdt'].line,
-                    )
-                )
+    while True:
+        market, p = await hb.recv_price()
+        logger.info(f"{market} {p}")
+        coins[market].update(p)
+        await vfd.update(
+            to_bytes(
+                coins['btcusdt'].line,
+                coins['ethusdt'].line,
+            )
+        )
+
+
+async def push(vfd: VFD):
+    while True:
+        await vfd.send_latest()
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    vfd = VFD(serial.Serial('COM4'))
+
+    loop = asyncio.get_event_loop()
+
+    loop.create_task(data(vfd))
+    loop.run_until_complete(push(vfd))
