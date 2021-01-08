@@ -55,6 +55,7 @@ class VFD:
             msg = await asyncio.wait_for(self._q.get(), timeout)
             self._last_sent = msg
         except asyncio.TimeoutError:
+            logger.warning('timeout')
             msg = self._last_sent
 
         self.send(msg)
