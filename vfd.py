@@ -38,7 +38,7 @@ class VFD:
         self.ser = ser
 
         self._last_sent = to_bytes()
-        self._q = asyncio.Queue(maxsize=1)
+        self._q: asyncio.Queue = asyncio.Queue(maxsize=1)
 
     async def update(self, msg: bytes):
         if not self._q.empty():
