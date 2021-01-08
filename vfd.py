@@ -34,11 +34,13 @@ class Coin:
 
 
 class VFD:
-    def __init__(self, ser) -> None:
+    def __init__(self, ser, loop) -> None:
         self.ser = ser
 
         self._last_sent = to_bytes()
         self._q: asyncio.Queue = asyncio.Queue(maxsize=1)
+
+        self.loop = loop
 
     async def update(self, msg: bytes):
         if not self._q.empty():
@@ -46,8 +48,8 @@ class VFD:
 
         await self._q.put(msg)
 
-    def send(self, msg: bytes):
-        self.ser.write(msg)
+    async def send(self, msg: bytes):
+        await self.loop.run_in_executor(None, self.ser.write, msg)
         logger.info(f'Sent to VFD')
 
     async def send_latest(self, timeout=0.5):
@@ -58,7 +60,7 @@ class VFD:
             logger.warning('timeout')
             msg = self._last_sent
 
-        self.send(msg)
+        await self.send(msg)
 
 
 async def data(vfd: VFD):
@@ -88,10 +90,9 @@ async def push(vfd: VFD):
 
 
 if __name__ == "__main__":
+    loop = asyncio.get_event_loop()
     with serial.Serial('COM4') as ser:
-        vfd = VFD(ser)
-
-        loop = asyncio.get_event_loop()
+        vfd = VFD(ser, loop)
 
         loop.create_task(data(vfd))
         loop.run_until_complete(push(vfd))
