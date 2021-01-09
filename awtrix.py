@@ -1,20 +1,21 @@
+import asyncio
 import json
-from time import sleep
 
-import requests
-
-
-def push(data: dict, endpoint: str):
-    res = requests.post(
-        f'http://localhost:7000/api/v3/{endpoint}',
-        data=json.dumps(data),
-        headers={'Content-Type': 'application/json'},
-    )
-    return res.text
+import aiohttp
 
 
-def draw_exit():
-    push(
+async def push(data: dict, endpoint: str):
+    async with aiohttp.ClientSession() as session:
+        async with session.post(
+            f'http://localhost:7000/api/v3/{endpoint}',
+            data=json.dumps(data),
+            headers={'Content-Type': 'application/json'},
+        ) as res:
+            return res.text
+
+
+async def draw_exit():
+    await push(
         {
             "draw": [{"type": "exit"}],
         },
@@ -22,10 +23,10 @@ def draw_exit():
     )
 
 
-def draw_price(price: int):
+async def draw_price(price: int):
     str_price = str(price)
     assert len(str_price) == 5
-    push(
+    await push(
         {
             "draw": [
                 {"type": "fill", "color": [50, 50, 50]},
@@ -43,8 +44,12 @@ def draw_price(price: int):
 
 
 if __name__ == "__main__":
-    for i in range(1, 9):
-        draw_price(i * 11111)
-        sleep(0.1)
 
-    draw_exit()
+    async def main():
+        for i in range(1, 9):
+            await draw_price(i * 11111)
+            await asyncio.sleep(0.1)
+
+        await draw_exit()
+
+    asyncio.run(main())
