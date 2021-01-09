@@ -13,20 +13,6 @@ def push(data: dict, endpoint: str):
     return res.text
 
 
-def notify_price(price: int):
-    str_price = str(price)
-    assert len(str_price) == 5
-    push(
-        {
-            "force": True,
-            "icon": 240,
-            "text": str_price,
-            'scrollSpeed': 10,
-        },
-        endpoint='notify',
-    )
-
-
 def draw_exit():
     push(
         {
