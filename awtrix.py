@@ -1,7 +1,11 @@
 import asyncio
 import json
+from typing import Literal
 
 import aiohttp
+from loguru import logger
+
+from ws_coin import Huobi
 
 
 async def push(ssn: aiohttp.ClientSession, data: dict, endpoint: str):
@@ -23,9 +27,8 @@ async def draw_exit(ssn: aiohttp.ClientSession):
     )
 
 
-async def draw_price(ssn: aiohttp.ClientSession, price: int):
+async def draw_price(ssn: aiohttp.ClientSession, price):
     str_price = str(price)
-    assert len(str_price) == 5
     await push(
         ssn,
         {
@@ -34,8 +37,8 @@ async def draw_price(ssn: aiohttp.ClientSession, price: int):
                 {
                     "type": "text",
                     "string": str_price,
-                    "position": [4, 1],
-                    "color": [255, 0, 0],
+                    "position": [1, 1],
+                    "color": [255, 255, 255],
                 },
                 {"type": "show"},
             ],
@@ -44,14 +47,47 @@ async def draw_price(ssn: aiohttp.ClientSession, price: int):
     )
 
 
+class Awtrix:
+    def __init__(self, loop) -> None:
+        self._ssn = aiohttp.ClientSession()
+        self._q: asyncio.Queue = asyncio.Queue(maxsize=1)
+
+        self.loop = loop
+
+    async def update(self, p):
+        if not self._q.empty():
+            await self._q.get()
+
+        await self._q.put(p)
+
+    async def send(self, p):
+        await draw_price(self._ssn, p)
+        logger.info(f'Sent to awtrix')
+
+    async def send_latest(self):
+        p = await self._q.get()
+        await self.send(p)
+
+
+async def data(awtrix: Awtrix):
+    hb = Huobi(markets=['btcusdt'])
+    await hb._connect()
+
+    while True:
+        market, p = await hb.recv_price()
+        logger.info(f"{market} {p}")
+        await awtrix.update(p)
+
+
+async def pushing(awtrix: Awtrix):
+    while True:
+        await awtrix.send_latest()
+
+
 if __name__ == "__main__":
 
-    async def main():
-        async with aiohttp.ClientSession() as ssn:
-            for i in range(1, 9):
-                await draw_price(ssn, i * 11111)
-                await asyncio.sleep(0.1)
+    loop = asyncio.get_event_loop()
+    awtrix = Awtrix(loop)
 
-            await draw_exit(ssn)
-
-    asyncio.run(main())
+    loop.create_task(data(awtrix))
+    loop.run_until_complete(pushing(awtrix))
