@@ -14,7 +14,6 @@ class Awtrix:
 
     async def __aenter__(self):
         self._ssn = aiohttp.ClientSession()
-        await self.draw_background()
         return self
 
     async def __aexit__(self, exc_type, exc, tb):
@@ -29,17 +28,6 @@ class Awtrix:
         ) as res:
             return res.text
 
-    async def draw_background(self):
-        await self._push(
-            {
-                "draw": [
-                    {"type": "fill", "color": [100, 100, 100]},
-                    {"type": "show"},
-                ]
-            },
-            endpoint='draw',
-        )
-
     async def draw_exit(self):
         await self._push(
             {
@@ -49,14 +37,13 @@ class Awtrix:
         )
 
     async def draw_price(self, price):
-        str_price = str(price)
         await self._push(
             {
                 "draw": [
                     {"type": "fill", "color": [50, 50, 50]},
                     {
                         "type": "text",
-                        "string": str_price,
+                        "string": f"{price:.2f}",
                         "position": [1, 1],
                         "color": [255, 255, 255],
                     },
@@ -91,7 +78,7 @@ async def data(awtrix: Awtrix):
         await awtrix.update(p)
 
 
-async def pushing(awtrix: Awtrix):
+async def push(awtrix: Awtrix):
     while True:
         await awtrix.send_latest()
 
@@ -101,7 +88,7 @@ if __name__ == "__main__":
     async def main(loop):
         async with Awtrix() as awtrix:
             loop.create_task(data(awtrix))
-            await pushing(awtrix)
+            await push(awtrix)
 
     loop = asyncio.get_event_loop()
     loop.run_until_complete(main(loop))
