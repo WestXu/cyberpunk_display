@@ -12,6 +12,8 @@ class Awtrix:
     def __init__(self) -> None:
         self._q: asyncio.Queue = asyncio.Queue(maxsize=1)
 
+        self._last_sent = None
+
     async def __aenter__(self):
         self._ssn = aiohttp.ClientSession()
         return self
@@ -65,7 +67,9 @@ class Awtrix:
 
     async def send_latest(self):
         p = await self._q.get()
-        await self.send(p)
+        if p != self._last_sent:
+            await self.send(p)
+            self._last_sent = p
 
 
 async def data(awtrix: Awtrix):
