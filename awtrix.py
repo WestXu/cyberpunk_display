@@ -12,7 +12,7 @@ class Awtrix:
     def __init__(self) -> None:
         self._q: asyncio.Queue = asyncio.Queue(maxsize=1)
 
-        self._last_sent = None
+        self._last_sent = 0
 
     async def __aenter__(self):
         self._ssn = aiohttp.ClientSession()
@@ -38,7 +38,12 @@ class Awtrix:
             endpoint='draw',
         )
 
-    async def draw_price(self, price):
+    async def draw_price(self, price, pre_p):
+        trend: int = round(price - pre_p)
+        anchor_x = 16
+        end_x = anchor_x + trend
+        end_x = min(max(end_x, 0), 31)
+
         await self._push(
             {
                 "draw": [
@@ -48,6 +53,16 @@ class Awtrix:
                         "string": f"{price:.2f}",
                         "position": [1, 1],
                         "color": [255, 255, 255],
+                    },
+                    {
+                        "type": "line",
+                        "start": [anchor_x, 7],
+                        "end": [end_x, 7],
+                        "color": [
+                            255 if trend < 0 else 100,
+                            255 if trend > 0 else 100,
+                            100,
+                        ],
                     },
                     {"type": "show"},
                 ],
@@ -61,14 +76,14 @@ class Awtrix:
 
         await self._q.put(p)
 
-    async def send(self, p):
-        await self.draw_price(p)
+    async def send(self, p, pre_p):
+        await self.draw_price(p, pre_p)
         logger.info(f'Sent to awtrix')
 
     async def send_latest(self):
         p = await self._q.get()
         if p != self._last_sent:
-            await self.send(p)
+            await self.send(p, pre_p=self._last_sent)
             self._last_sent = p
 
 
