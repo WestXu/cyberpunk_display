@@ -30,12 +30,21 @@ def to_bytes(num: float) -> bytes:
 
 
 class Nixie:
-    def __init__(self, ser, loop) -> None:
-        self.ser = ser
+    def __init__(self, com_port: int, loop) -> None:
+        self.com_port = com_port
         self.loop = loop
 
         self._q: asyncio.Queue = asyncio.Queue(maxsize=1)
         self._last_sent = 0
+
+    def __enter__(self):
+        self.ser = serial.Serial(f'COM{self.com_port}')
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        self.ser.write(f'TIMDBBBBBBBBBBBB'.encode())  # 关闭辉光管的所有灯丝
+        sleep(1)
+        self.ser.close()
 
     def set_brightness(self, brightness: int = 9):
         assert 0 <= brightness <= 9
@@ -75,8 +84,7 @@ async def push(nixie: Nixie):
 
 if __name__ == "__main__":
     loop = asyncio.get_event_loop()
-    with serial.Serial('COM3') as ser:
-        nixie = Nixie(ser, loop)
+    with Nixie(3, loop) as nixie:
         nixie.set_brightness(9)
 
         loop.create_task(data(nixie))
