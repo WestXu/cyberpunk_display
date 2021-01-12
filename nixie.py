@@ -20,7 +20,7 @@ def format_num(num: float) -> float:
 
 
 def to_bytes(num: float) -> bytes:
-    num_str = f"{format_num(num):0>6}"
+    num_str = f"{num:0>6}"
 
     dot_list = list('BBBBBB')
     if (dot_position := num_str.find('.')) != -1:
@@ -45,7 +45,7 @@ class Nixie:
         if not self._q.empty():
             await self._q.get()
 
-        await self._q.put(p)
+        await self._q.put(format_num(p))
 
     async def send(self, p: float):
         await self.loop.run_in_executor(None, self.ser.write, to_bytes(p))
