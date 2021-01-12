@@ -37,7 +37,7 @@ class Nixie:
         self._q: asyncio.Queue = asyncio.Queue(maxsize=1)
         self._last_sent = 0
 
-    async def set_brightness(self, brightness: int = 9):
+    def set_brightness(self, brightness: int = 9):
         assert 0 <= brightness <= 9
         self.ser.write(f'TIMB{brightness}'.encode())
 
@@ -75,7 +75,7 @@ async def push(nixie: Nixie):
 
 if __name__ == "__main__":
     loop = asyncio.get_event_loop()
-    with serial.Serial('COM4') as ser:
+    with serial.Serial('COM3') as ser:
         nixie = Nixie(ser, loop)
         nixie.set_brightness(9)
 
