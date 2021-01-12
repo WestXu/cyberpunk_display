@@ -14,9 +14,10 @@ def to_bytes(line1=' ' * 16, line2=' ' * 16):
 
 
 class Coin:
-    def __init__(self, market, name):
+    def __init__(self, market, name, precision: Literal[1, 2, 3, 4] = 2):
         self.market = market
         self.name = name.upper()
+        self.precision = precision
 
         self.p = 0
         self.trend: Literal['+', '-'] = '+'
@@ -30,7 +31,15 @@ class Coin:
 
     @property
     def line(self):
-        return f"{self.name}: {self.trend}{self.p:>10.2f}"
+        if self.precision == 1:
+            str_p = f"{self.p:>10.1f}"
+        elif self.precision == 2:
+            str_p = f"{self.p:>10.2f}"
+        elif self.precision == 3:
+            str_p = f"{self.p:>10.3f}"
+        else:
+            str_p = f"{self.p:>10.4f}"
+        return f"{self.name}: {self.trend}" + str_p
 
 
 class VFD:
@@ -65,8 +74,8 @@ class VFD:
 
 async def data(vfd: VFD):
     coins = {
-        'btcusdt': Coin('btcusdt', 'BTC'),
         'ethusdt': Coin('ethusdt', 'ETH'),
+        'uniusdt': Coin('uniusdt', 'UNI', 4),
     }
 
     hb = Huobi(markets=list(coins.keys()))
@@ -78,8 +87,8 @@ async def data(vfd: VFD):
         coins[market].update(p)
         await vfd.update(
             to_bytes(
-                coins['btcusdt'].line,
                 coins['ethusdt'].line,
+                coins['uniusdt'].line,
             )
         )
 
