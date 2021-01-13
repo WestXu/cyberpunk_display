@@ -1,20 +1,23 @@
-from queue import Queue
+import asyncio
 
 import numpy as np
 
 
 class PriceQueue:
     def __init__(self):
-        self.q = Queue(maxsize=32)
+        self.q = asyncio.Queue(maxsize=32)
+        self.lock = asyncio.Lock()
 
-    def update(self, p):
-        if self.q.full():
-            self.q.get()
-        self.q.put(p)
+    async def update(self, p):
+        async with self.lock:
+            if self.q.full():
+                await self.q.get()
+            await self.q.put(p)
 
-    def tolist(self):
-        assert not self.q.empty()
-        l = list(self.q.queue)
+    async def tolist(self):
+        async with self.lock:
+            assert not self.q.empty()
+            l = list(self.q._queue)
         if len(l) == 32:
             return l
         return [l[0]] * (32 - len(l)) + l
@@ -49,12 +52,14 @@ class Matrix:
 
 if __name__ == "__main__":
     import random
-    from time import sleep
 
-    p = 0
-    pq = PriceQueue()
-    while True:
-        p += random.randint(-10, 10)
-        pq.update(p)
-        Matrix(pq.tolist()).plot()
-        sleep(0.1)
+    async def main():
+        p = 0
+        pq = PriceQueue()
+        while True:
+            p += random.randint(-10, 10)
+            await pq.update(p)
+            Matrix(await pq.tolist()).plot()
+            await asyncio.sleep(0.1)
+
+    asyncio.run(main())
