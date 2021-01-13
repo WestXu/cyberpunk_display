@@ -84,7 +84,7 @@ async def push(nixie: Nixie):
 
 if __name__ == "__main__":
     loop = asyncio.get_event_loop()
-    with Nixie(3, loop) as nixie:
+    with Nixie(5, loop) as nixie:
         nixie.set_brightness(9)
 
         loop.create_task(data(nixie))
