@@ -5,12 +5,14 @@ from typing import Literal
 import aiohttp
 from loguru import logger
 
+from matrix import Matrix, PriceQueue
 from ws_coin import Huobi
 
 
 class Awtrix:
     def __init__(self) -> None:
         self._q: asyncio.Queue = asyncio.Queue(maxsize=1)
+        self._pq = PriceQueue()
 
         self._last_sent = 0
 
@@ -34,6 +36,26 @@ class Awtrix:
         await self._push(
             {
                 "draw": [{"type": "exit"}],
+            },
+            endpoint='draw',
+        )
+
+    async def plot_price(self, p):
+        await self._push(
+            {
+                "draw": (
+                    [{"type": "fill", "color": [50, 50, 50]}]
+                    + Matrix(await self._pq.tolist()).to_pixel()
+                    + [
+                        {
+                            "type": "text",
+                            "string": f"{p:.2f}",
+                            "position": [1, 1],
+                            "color": [255, 255, 255],
+                        },
+                        {"type": "show"},
+                    ]
+                ),
             },
             endpoint='draw',
         )
@@ -73,18 +95,18 @@ class Awtrix:
     async def update(self, p):
         if not self._q.empty():
             await self._q.get()
-
         await self._q.put(p)
 
+        await self._pq.update(p)
+
     async def send(self, p, pre_p):
-        await self.draw_price(p, pre_p)
+        await self.plot_price(p)
         logger.info(f'Sent to awtrix')
 
     async def send_latest(self):
         p = await self._q.get()
-        if p != self._last_sent:
-            await self.send(p, pre_p=self._last_sent)
-            self._last_sent = p
+        await self.send(p, pre_p=self._last_sent)
+        self._last_sent = p
 
 
 async def data(awtrix: Awtrix):

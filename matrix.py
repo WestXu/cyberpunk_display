@@ -37,17 +37,64 @@ class Matrix:
             return [3] * 32
         return ((sr - sr.min()) / rg * 6).round().astype(int).tolist()
 
-    def plot(self):
-        matrix = np.zeros((7, 32))
+    @property
+    def array(self):
+        array = np.zeros((8, 32))
         for col, i in enumerate(self.int_ls):
-            matrix[6 - i][col] = 1
+            array[7 - i, col] = 1
 
+        return array
+
+    @property
+    def up_down_ls(self):
+        up_down_ls = [0]
+        for i in range(1, 32):
+            p = self.num_ls[i]
+            pre_p = self.num_ls[i - 1]
+            if p > pre_p:
+                up_down_ls.append(1)
+            elif p < pre_p:
+                up_down_ls.append(-1)
+            else:
+                up_down_ls.append(0)
+        return up_down_ls
+
+    def plot(self):
         black, white = "██", "  "
         print(
             "\n".join(
-                ["".join([black if i == 1 else white for i in row]) for row in matrix]
+                [
+                    "".join([black if i == 1 else white for i in row])
+                    for row in self.array
+                ]
             )
         )
+
+    def to_pixel(self):
+        array = self.array.copy()
+        up_down_ls = self.up_down_ls
+
+        def find_y(x):
+            tarray = array[:, x]
+            for y, i in enumerate(tarray):
+                if i == 1:
+                    return y
+
+        return [
+            {
+                "type": "pixel",
+                "position": [x, y],
+                "color": (
+                    [0, 150, 0]
+                    if up_down_ls[x] == 1
+                    else [150, 0, 0]
+                    if up_down_ls[x] == -1
+                    else [0, 0, 150]
+                ),
+            }
+            for x in range(32)
+            if (y := find_y(x)) is not None
+        ]
 
 
 if __name__ == "__main__":
