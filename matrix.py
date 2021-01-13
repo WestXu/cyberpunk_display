@@ -1,4 +1,5 @@
 import asyncio
+from functools import cached_property
 
 import numpy as np
 
@@ -29,7 +30,7 @@ class Matrix:
         self.num_ls = num_ls
         self.sr = np.array(num_ls)
 
-    @property
+    @cached_property
     def int_ls(self):
         sr = self.sr
         rg = sr.max() - sr.min()
@@ -37,7 +38,7 @@ class Matrix:
             return [3] * 32
         return ((sr - sr.min()) / rg * 6).round().astype(int).tolist()
 
-    @property
+    @cached_property
     def array(self):
         array = np.zeros((8, 32))
         for col, i in enumerate(self.int_ls):
@@ -45,7 +46,7 @@ class Matrix:
 
         return array
 
-    @property
+    @cached_property
     def up_down_ls(self):
         up_down_ls = [0]
         for i in range(1, 32):
