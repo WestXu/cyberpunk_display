@@ -44,8 +44,7 @@ class Awtrix:
         await self._push(
             {
                 "draw": (
-                    [{"type": "fill", "color": [50, 50, 50]}]
-                    + Matrix(await self._pq.tolist()).to_pixel()
+                    Matrix(await self._pq.tolist()).to_pixel()
                     + [
                         {
                             "type": "text",
