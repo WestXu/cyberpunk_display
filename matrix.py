@@ -4,6 +4,28 @@ from functools import cached_property
 import numpy as np
 
 
+def rgb888_to_rgb565(im: np.array) -> np.array:
+    """copy from https://stackoverflow.com/a/61521134
+    >>> import numpy as np
+    >>> np.random.seed(0)
+    >>> im = np.random.randint(0, 256, (1, 4, 3), dtype=np.uint8)
+    >>> im
+    array([[[172,  10, 127],
+            [140,  47, 170],
+            [196, 151, 117],
+            [166,  22, 183]]], dtype=uint8)
+    >>> rgb888_to_rgb565(im)
+    array([[43087, 35189, 50350, 41142]], dtype=uint16)
+    """
+    R5 = (im[..., 0] >> 3).astype(np.uint16) << 11
+    G6 = (im[..., 1] >> 2).astype(np.uint16) << 5
+    B5 = (im[..., 2] >> 3).astype(np.uint16)
+
+    RGB565 = R5 | G6 | B5
+
+    return RGB565
+
+
 class PriceQueue:
     def __init__(self):
         self.q = asyncio.Queue(maxsize=32)
@@ -66,31 +88,21 @@ class Matrix:
             )
         )
 
-    def to_pixel(self):
-        array = self.array.copy()
-        up_down_ls = self.up_down_ls
-
-        def find_y(x):
-            tarray = array[:, x]
-            for y, i in enumerate(tarray):
-                if i == 1:
-                    return y
-
-        return [
-            {
-                "type": "pixel",
-                "position": [x, y],
-                "color": (
-                    [0, 255, 0]
-                    if up_down_ls[x] == 1
-                    else [255, 0, 0]
-                    if up_down_ls[x] == -1
-                    else [0, 0, 255]
-                ),
-            }
-            for x in range(32)
-            if (y := find_y(x)) is not None
-        ]
+    def to_pixel(self) -> np.array:
+        up_down_matrix = (
+            np.tile(
+                np.array(self.up_down_ls) + 2,  # 1跌2平3涨
+                (8, 1),  # 1行复制为8行，这样每列的数字都相同
+            )
+            * self.array  # 每列只保留有效点
+        )
+        R = np.where(up_down_matrix == 1, 255, 0)
+        G = np.where(up_down_matrix == 2, 255, 0)
+        B = np.where(up_down_matrix == 3, 255, 0)
+        RGB = np.concatenate(
+            [R[:, :, None], G[:, :, None], B[:, :, None]], axis=2
+        )  # 把R/G/B三个2维色相拼成RGB图像
+        return rgb888_to_rgb565(RGB)  # 转化为RGB565
 
 
 if __name__ == "__main__":

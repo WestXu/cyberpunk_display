@@ -42,8 +42,12 @@ class Awtrix:
         await self._push(
             {
                 "draw": (
-                    Matrix(await self._pq.tolist()).to_pixel()
-                    + [
+                    [
+                        {
+                            "type": "bmp",
+                            "position": [0, 0],
+                            "data": Matrix(await self._pq.tolist()).to_pixel().tolist(),
+                        },
                         {
                             "type": "text",
                             "string": f"{p:.2f}",
