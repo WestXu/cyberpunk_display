@@ -46,7 +46,13 @@ class Awtrix:
                         {
                             "type": "bmp",
                             "position": [0, 0],
-                            "data": Matrix(await self._pq.tolist()).to_pixel().tolist(),
+                            "size": [32, 8],
+                            "data": (
+                                Matrix(await self._pq.tolist())
+                                .to_pixel()
+                                .flatten()
+                                .tolist()
+                            ),
                         },
                         {
                             "type": "text",
