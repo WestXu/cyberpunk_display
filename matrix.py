@@ -97,8 +97,8 @@ class Matrix:
             * self.array  # 每列只保留有效点
         )
         R = np.where(up_down_matrix == 1, 255, 0)
-        G = np.where(up_down_matrix == 2, 255, 0)
-        B = np.where(up_down_matrix == 3, 255, 0)
+        B = np.where(up_down_matrix == 2, 255, 0)
+        G = np.where(up_down_matrix == 3, 255, 0)
         RGB = np.concatenate(
             [R[:, :, None], G[:, :, None], B[:, :, None]], axis=2
         )  # 把R/G/B三个2维色相拼成RGB图像
