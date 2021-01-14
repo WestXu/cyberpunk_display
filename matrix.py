@@ -27,7 +27,7 @@ class PriceQueue:
 class Matrix:
     def __init__(self, num_ls: list):
         assert len(num_ls) == 32
-        self.num_ls = num_ls
+        self.num_ls = list(num_ls)
         self.sr = np.array(num_ls)
 
     @cached_property
@@ -40,6 +40,7 @@ class Matrix:
 
     @cached_property
     def array(self):
+        '''二维，1表示有点，0表示没有点'''
         array = np.zeros((8, 32))
         for col, i in enumerate(self.int_ls):
             array[7 - i, col] = 1
@@ -48,17 +49,11 @@ class Matrix:
 
     @cached_property
     def up_down_ls(self):
-        up_down_ls = [0]
-        for i in range(1, 32):
-            p = self.num_ls[i]
-            pre_p = self.num_ls[i - 1]
-            if p > pre_p:
-                up_down_ls.append(1)
-            elif p < pre_p:
-                up_down_ls.append(-1)
-            else:
-                up_down_ls.append(0)
-        return up_down_ls
+        '''1维列表。-1跌，0平，1涨。第一个值永远为0'''
+        diff = np.diff(self.sr)
+        diff[diff > 0] = 1
+        diff[diff < 0] = -1
+        return [0] + diff.tolist()
 
     def plot(self):
         black, white = "██", "  "
