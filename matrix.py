@@ -86,11 +86,11 @@ class Matrix:
                 "type": "pixel",
                 "position": [x, y],
                 "color": (
-                    [0, 150, 0]
+                    [0, 255, 0]
                     if up_down_ls[x] == 1
-                    else [150, 0, 0]
+                    else [255, 0, 0]
                     if up_down_ls[x] == -1
-                    else [0, 0, 150]
+                    else [0, 0, 255]
                 ),
             }
             for x in range(32)
