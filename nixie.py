@@ -1,4 +1,5 @@
 import asyncio
+import time
 from time import sleep
 from typing import Literal, Union
 
@@ -78,7 +79,8 @@ async def data(nixie: Nixie):
 
 
 async def push(nixie: Nixie):
-    while True:
+    start_time = time.time()
+    while time.time() - start_time < 60 * 60 * 12:
         await nixie.send_latest()
 
 
@@ -89,3 +91,5 @@ if __name__ == "__main__":
 
         loop.create_task(data(nixie))
         loop.run_until_complete(push(nixie))
+
+    time.sleep(1)
