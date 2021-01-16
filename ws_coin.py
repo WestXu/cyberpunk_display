@@ -63,7 +63,12 @@ class Huobi:
 
     async def _connect(self):
         logger.info(f'Connecting...')
-        self.websocket = await websockets.connect(self.uri)
+        try:
+            self.websocket = await websockets.connect(self.uri)
+        except ConnectionError:
+            logger.info(f'ConnectionError {ConnectionError}, retrying...')
+            return await self._connect()
+
         for market in self.markets:
             logger.info(f'subscribing {market}')
             await self._send({"sub": f"market.{market}.trade.detail", "id": market})
