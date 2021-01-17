@@ -96,6 +96,7 @@ class Matrix:
             )
             * self.array  # 每列只保留有效点
         )
+        up_down_matrix = np.cumsum(up_down_matrix, axis=0)
         R = np.where(up_down_matrix == 1, 255, 0)
         B = np.where(up_down_matrix == 2, 255, 0)
         G = np.where(up_down_matrix == 3, 255, 0)
