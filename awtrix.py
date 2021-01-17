@@ -1,5 +1,6 @@
 import asyncio
 import json
+import time
 from typing import Literal
 
 import aiohttp
@@ -13,6 +14,8 @@ class Awtrix:
     def __init__(self) -> None:
         self._q: asyncio.Queue = asyncio.Queue(maxsize=1)
         self._pq = PriceQueue()
+
+        self._last_sent_time = 0
 
     async def __aenter__(self):
         self._ssn = aiohttp.ClientSession()
@@ -80,7 +83,13 @@ class Awtrix:
 
     async def send_latest(self):
         p = await self._q.get()
+        if time.time() - self._last_sent_time < 0.1:
+            '''小于0.1秒的间隔没有必要发送，人眼无法分辨'''
+            logger.info('Skipped sending because of too little interval.')
+            return
+
         await self.send(p)
+        self._last_sent_time = time.time()
 
 
 async def data(awtrix: Awtrix):
