@@ -96,10 +96,29 @@ class Matrix:
             )
             * self.array  # 每列只保留有效点
         )
-        up_down_matrix = np.cumsum(up_down_matrix, axis=0)
-        R = np.where(up_down_matrix == 1, 255, 0)
-        B = np.where(up_down_matrix == 2, 255, 0)
-        G = np.where(up_down_matrix == 3, 255, 0)
+
+        dim = 0.7
+        down_color = (np.array((255, 0, 227)) * dim).round().astype(int)
+        flat_color = (np.array((255, 255, 0)) * dim).round().astype(int)
+        up_color = (np.array((0, 245, 251)) * dim).round().astype(int)
+
+        up_down_matrix = up_down_matrix
+
+        R = np.where(up_down_matrix == 1, down_color[0], 0)
+        R[up_down_matrix == 3] = up_color[0]
+        R[up_down_matrix == 2] = flat_color[0]
+        R[up_down_matrix == 1] = down_color[0]
+
+        G = np.where(up_down_matrix == 3, up_color[1], 0)
+        G[up_down_matrix == 1] = down_color[1]
+        G[up_down_matrix == 3] = up_color[1]
+        G[up_down_matrix == 2] = flat_color[1]
+
+        B = np.where(up_down_matrix == 2, flat_color[2], 0)
+        B[up_down_matrix == 1] = down_color[2]
+        B[up_down_matrix == 3] = up_color[2]
+        B[up_down_matrix == 2] = flat_color[2]
+
         RGB = np.concatenate(
             [R[:, :, None], G[:, :, None], B[:, :, None]], axis=2
         )  # 把R/G/B三个2维色相拼成RGB图像
