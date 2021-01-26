@@ -20,10 +20,8 @@ class Huobi:
     async def _send(self, data: dict):
         try:
             await self.websocket.send(json.dumps(data))
-        except websockets.ConnectionClosedError:
-            logger.warning(
-                f'ConnectionClosedError sending data {data}, reconnecting...'
-            )
+        except websockets.exceptions.WebSocketException as e:
+            logger.warning(f'{e} sending data {data}, reconnecting...')
             await self._connect()
 
     async def _recv(self, timeout=None) -> dict:
@@ -35,8 +33,8 @@ class Huobi:
                 res = await self.websocket.recv()
             else:
                 res = await asyncio.wait_for(self.websocket.recv(), timeout=timeout)
-        except websockets.ConnectionClosedError:
-            logger.warning(f'ConnectionClosedError recieving data, reconnecting...')
+        except websockets.exceptions.WebSocketException as e:
+            logger.warning(f'{e} recieving data, reconnecting...')
             await self._connect()
             return await _retry()
 
