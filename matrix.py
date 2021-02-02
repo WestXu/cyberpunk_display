@@ -98,9 +98,9 @@ class Matrix:
         )
 
         dim = 0.7
-        down_color = (np.array((255, 0, 227)) * dim).round().astype(int)
-        flat_color = (np.array((255, 255, 0)) * dim).round().astype(int)
-        up_color = (np.array((0, 245, 251)) * dim).round().astype(int)
+        down_color = (np.array((255, 0, 0)) * dim).round().astype(int)
+        flat_color = (np.array((0, 0, 255)) * dim).round().astype(int)
+        up_color = (np.array((0, 255, 0)) * dim).round().astype(int)
 
         up_down_matrix = up_down_matrix
 
