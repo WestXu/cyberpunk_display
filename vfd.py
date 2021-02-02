@@ -32,14 +32,15 @@ class Coin:
     @property
     def line(self):
         if self.precision == 1:
-            str_p = f"{self.p:>10.1f}"
+            str_p = f"{self.p:.1f}"
         elif self.precision == 2:
-            str_p = f"{self.p:>10.2f}"
+            str_p = f"{self.p:.2f}"
         elif self.precision == 3:
-            str_p = f"{self.p:>10.3f}"
+            str_p = f"{self.p:.3f}"
         else:
-            str_p = f"{self.p:>10.4f}"
-        return f"{self.name}: {self.trend}" + str_p
+            str_p = f"{self.p:.4f}"
+
+        return f"{self.name + ':':<6}{self.trend}{str_p:>9}"
 
 
 class VFD:
