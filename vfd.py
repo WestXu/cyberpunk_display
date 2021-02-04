@@ -31,15 +31,7 @@ class Coin:
 
     @property
     def line(self):
-        if self.precision == 1:
-            str_p = f"{self.p:.1f}"
-        elif self.precision == 2:
-            str_p = f"{self.p:.2f}"
-        elif self.precision == 3:
-            str_p = f"{self.p:.3f}"
-        else:
-            str_p = f"{self.p:.4f}"
-
+        str_p = ('{:.%df}' % self.precision).format(self.p)
         return f"{self.name + ':':<6}{self.trend}{str_p:>9}"
 
 
