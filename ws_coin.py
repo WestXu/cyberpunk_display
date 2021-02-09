@@ -8,7 +8,7 @@ from loguru import logger
 
 
 class Huobi:
-    uri = "wss://api.hadax.com/ws"
+    uri = "ws://api.hadax.com/ws"
 
     def __init__(self, markets: List[str]) -> None:
         self.markets = markets
