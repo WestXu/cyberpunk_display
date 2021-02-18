@@ -63,8 +63,8 @@ class Huobi:
         logger.info(f'Connecting...')
         try:
             self.websocket = await websockets.connect(self.uri)
-        except ConnectionError:
-            logger.info(f'ConnectionError {ConnectionError}, retrying...')
+        except Exception as e:
+            logger.info(f'ConnectionError {e}, retrying...')
             return await self._connect()
 
         for market in self.markets:
