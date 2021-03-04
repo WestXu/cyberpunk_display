@@ -84,6 +84,14 @@ class Driver:
         while True:
             for market in list(self.coins.keys())[1:]:
                 self.show_coins[1] = market
+                await vfd.update(
+                    to_bytes(
+                        self.coins[self.show_coins[0]].line,
+                        self.coins[self.show_coins[1]].line,
+                    )
+                )
+                await self.vfd.send_latest()
+                
                 await asyncio.sleep(2)
 
     async def recv_run(self):
