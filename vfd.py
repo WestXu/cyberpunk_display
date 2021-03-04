@@ -1,5 +1,5 @@
 import asyncio
-from typing import Literal
+from typing import Dict, Literal
 
 import serial
 from loguru import logger
@@ -65,36 +65,65 @@ class VFD:
         await self.send(msg)
 
 
-async def data(vfd: VFD):
-    coins = {
-        'ethusdt': Coin('ethusdt', 'ETH'),
-        'uniusdt': Coin('uniusdt', 'UNI', 4),
-    }
+class Driver:
+    def __init__(self, vfd: VFD, coins: Dict[str, Coin], loop) -> None:
+        self.vfd = vfd
 
-    hb = Huobi(markets=list(coins.keys()))
-    await hb._connect()
+        assert len(coins) >= 2
+        self.coins = coins
+        self.loop = loop
 
-    while True:
-        market, p = await hb.recv_price()
-        logger.info(f"{market} {p}")
-        coins[market].update(p)
-        await vfd.update(
-            to_bytes(
-                coins['ethusdt'].line,
-                coins['uniusdt'].line,
-            )
-        )
+        self.hb = Huobi(markets=list(coins.keys()))
 
+        self.show_coins = list(coins.keys())[:2]
 
-async def push(vfd: VFD):
-    while True:
-        await vfd.send_latest()
+    async def connect_hb(self):
+        await self.hb._connect()
+
+    async def switch_run(self):
+        while True:
+            for market in list(self.coins.keys())[1:]:
+                self.show_coins[1] = market
+                await asyncio.sleep(2)
+
+    async def recv_run(self):
+        while True:
+            market, p = await self.hb.recv_price()
+            logger.info(f"{market} {p}")
+            self.coins[market].update(p)
+
+            if market in self.show_coins:
+                await vfd.update(
+                    to_bytes(
+                        self.coins[self.show_coins[0]].line,
+                        self.coins[self.show_coins[1]].line,
+                    )
+                )
+
+    async def push_run(self):
+        while True:
+            await self.vfd.send_latest()
+
+    async def start(self):
+        await self.connect_hb()
+
+        if len(self.coins) > 2:
+            self.loop.create_task(self.switch_run())
+
+        self.loop.create_task(self.recv_run())
+
+        await self.push_run()
 
 
 if __name__ == "__main__":
     loop = asyncio.get_event_loop()
-    with serial.Serial('COM4') as ser:
+    with serial.Serial('COM6') as ser:
         vfd = VFD(ser, loop)
-
-        loop.create_task(data(vfd))
-        loop.run_until_complete(push(vfd))
+        coins = {
+            'ethusdt': Coin('ethusdt', 'ETH'),
+            'ltcusdt': Coin('ltcusdt', 'LTC'),
+            'uniusdt': Coin('uniusdt', 'UNI', 4),
+            'bagsusdt': Coin('bagsusdt', 'BAGS'),
+        }
+        driver = Driver(vfd, coins, loop)
+        loop.run_until_complete(driver.start())
