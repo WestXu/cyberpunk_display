@@ -93,7 +93,7 @@ class Driver:
             )
 
             i += 1
-            await asyncio.sleep(0.5)
+            await asyncio.sleep(0.25)
 
     async def start(self):
         await self.connect_hb()
