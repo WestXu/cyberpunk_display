@@ -42,7 +42,7 @@ class Coin:
     @property
     def compact_line(self):
         str_p = ('{:.%df}' % self.precision).format(self.p)
-        return f"{self.name}:{self.trend}{str_p}"
+        return f"{self.name}:{str_p}"
 
 
 class VFD:
