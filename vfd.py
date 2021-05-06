@@ -19,7 +19,7 @@ def scroll_line(line: str, bit: int):
 
 
 class Coin:
-    def __init__(self, market, name, precision: Literal[1, 2, 3, 4] = 2):
+    def __init__(self, market, name, precision: int = 2):
         self.market = market
         self.name = name.upper()
         self.precision = precision
@@ -87,7 +87,7 @@ class Driver:
             )
             await vfd.send(
                 to_bytes(
-                    self.coins['ethusdt'].line,
+                    self.coins['btcusdt'].line,
                     line2,
                 )
             )
@@ -108,10 +108,11 @@ if __name__ == "__main__":
     with serial.Serial('COM6') as ser:
         vfd = VFD(ser, loop)
         coins = {
+            'btcusdt': Coin('btcusdt', 'BTC'),
             'ethusdt': Coin('ethusdt', 'ETH'),
-            'ltcusdt': Coin('ltcusdt', 'LTC'),
             'uniusdt': Coin('uniusdt', 'UNI', 4),
             'bagsusdt': Coin('bagsusdt', 'BAGS'),
+            'ethbtc': Coin('ethbtc', 'E/B', 6),
         }
         driver = Driver(vfd, coins, loop)
         loop.run_until_complete(driver.start())
