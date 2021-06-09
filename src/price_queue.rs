@@ -48,20 +48,35 @@ impl PriceQueue {
         }
         v
     }
-}
 
-impl fmt::Display for PriceQueue {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let s: String = self
-            .get_up_down()
+    #[cfg(test)]
+    pub fn get_up_down_repr(&self) -> String {
+        self.get_up_down()
             .iter()
             .map(|d| match d {
                 Direction::Flat => '-',
                 Direction::Up => '↑',
                 Direction::Down => '↓',
             })
-            .collect();
+            .collect()
+    }
 
-        write!(f, "{}", s)
+    pub fn get_int_pos_v(&self) -> Vec<u8> {
+        let (min, max) = (self.q.iter().min().unwrap(), self.q.iter().max().unwrap());
+        let rng: NotNan<f64> = max - min;
+        if rng == 0.0 {
+            vec![3; 32]
+        } else {
+            self.q
+                .iter()
+                .map(|p| ((p - min) / rng * 6.0).round() as u8)
+                .collect()
+        }
+    }
+}
+
+impl fmt::Display for PriceQueue {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?}", self.get_int_pos_v())
     }
 }
