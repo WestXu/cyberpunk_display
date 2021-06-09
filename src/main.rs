@@ -15,5 +15,6 @@ fn main() {
         p += NotNan::new(rng.gen_range(-10.0..10.0)).unwrap();
         pq.push(p);
         println!("{:}", pq);
+        println!("\n");
     }
 }

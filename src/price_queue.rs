@@ -61,7 +61,7 @@ impl PriceQueue {
             .collect()
     }
 
-    pub fn get_int_pos_v(&self) -> Vec<u8> {
+    pub fn get_int_pos_v(&self) -> Vec<usize> {
         let (min, max) = (self.q.iter().min().unwrap(), self.q.iter().max().unwrap());
         let rng: NotNan<f64> = max - min;
         if rng == 0.0 {
@@ -69,14 +69,38 @@ impl PriceQueue {
         } else {
             self.q
                 .iter()
-                .map(|p| ((p - min) / rng * 6.0).round() as u8)
+                .map(|p| ((p - min) / rng * 6.0).round() as usize)
                 .collect()
         }
+    }
+
+    pub fn get_2d_array(&self) -> Vec<Vec<bool>> {
+        let mut array = vec![vec![false; 32]; 8];
+
+        for (col, i) in self.get_int_pos_v().iter().enumerate() {
+            array[7 - i][col] = true;
+        }
+
+        array
+    }
+
+    pub fn get_plot(&self) -> String {
+        let (black, white) = ("██", "  ");
+        self.get_2d_array()
+            .into_iter()
+            .map(|row| {
+                row.into_iter()
+                    .map(|i| if i { black } else { white })
+                    .collect::<Vec<&str>>()
+                    .join("")
+            })
+            .collect::<Vec<String>>()
+            .join("\n")
     }
 }
 
 impl fmt::Display for PriceQueue {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:?}", self.get_int_pos_v())
+        write!(f, "{:}", self.get_plot())
     }
 }
