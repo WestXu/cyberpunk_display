@@ -1,3 +1,4 @@
+use ordered_float::NotNan;
 use rand::Rng;
 
 mod price_queue;
@@ -8,10 +9,10 @@ fn main() {
 
     let mut pq = PriceQueue::new();
 
-    let mut p = 100.0;
+    let mut p = NotNan::new(100.0).unwrap();
 
     for _i in 1..20 {
-        p += rng.gen_range(-10.0..10.0);
+        p += NotNan::new(rng.gen_range(-10.0..10.0)).unwrap();
         pq.push(p);
         println!("{:}", pq);
     }

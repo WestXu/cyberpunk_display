@@ -1,6 +1,8 @@
 use std::collections::vec_deque::VecDeque;
 use std::fmt;
 
+use ordered_float::NotNan;
+
 pub enum Direction {
     Flat,
     Up,
@@ -9,7 +11,7 @@ pub enum Direction {
 
 #[derive(Debug)]
 pub struct PriceQueue {
-    q: VecDeque<f64>,
+    q: VecDeque<NotNan<f64>>,
 }
 
 impl PriceQueue {
@@ -18,7 +20,7 @@ impl PriceQueue {
         PriceQueue { q }
     }
 
-    pub fn push(&mut self, p: f64) {
+    pub fn push(&mut self, p: NotNan<f64>) {
         if self.q.len() == 32 {
             self.q.pop_front();
         }
