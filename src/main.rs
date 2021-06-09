@@ -3,6 +3,12 @@ use std::collections::vec_deque::VecDeque;
 
 use std::fmt;
 
+enum Direction {
+    Flat,
+    Up,
+    Down,
+}
+
 #[derive(Debug)]
 struct PriceQueue {
     q: VecDeque<f64>,
@@ -23,25 +29,39 @@ impl PriceQueue {
             self.q.push_back(p);
         }
     }
-}
 
-impl fmt::Display for PriceQueue {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut s = String::from("-");
+    pub fn get_up_down(&self) -> Vec<Direction> {
+        let mut v = vec![Direction::Flat];
         for i in 1..self.q.len() {
             let p = self.q.get(i);
             let pre_p = self.q.get(i - 1);
 
-            let char = if p == pre_p {
-                '-'
+            let d: Direction = if p == pre_p {
+                Direction::Flat
             } else if p > pre_p {
-                '↑'
+                Direction::Up
             } else {
-                '↓'
+                Direction::Down
             };
 
-            s.push(char);
+            v.push(d);
         }
+        v
+    }
+}
+
+impl fmt::Display for PriceQueue {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let s: String = self
+            .get_up_down()
+            .iter()
+            .map(|d| match d {
+                Direction::Flat => '-',
+                Direction::Up => '↑',
+                Direction::Down => '↓',
+            })
+            .collect();
+
         write!(f, "{}", s)
     }
 }
