@@ -9,3 +9,4 @@ edition = "2018"
 [dependencies]
 rand="0.8.3"
 ordered-float = "2.0"
+ansi_term = "0.12.1"

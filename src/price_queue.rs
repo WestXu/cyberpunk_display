@@ -1,6 +1,7 @@
 use std::collections::vec_deque::VecDeque;
 use std::fmt;
 
+use ansi_term::Colour::{Blue, Green, Red};
 use ordered_float::NotNan;
 
 pub enum Direction {
@@ -85,12 +86,32 @@ impl PriceQueue {
     }
 
     pub fn get_plot(&self) -> String {
-        let (black, white) = ("██", "  ");
+        let (dot, blank) = ("██".to_string(), "  ".to_string());
+        let (blue, green, red) = (
+            Blue.paint(&dot).to_string(),
+            Green.paint(&dot).to_string(),
+            Red.paint(&dot).to_string(),
+        );
+
+        let up_down = self.get_up_down();
+
         self.get_2d_array()
             .into_iter()
             .map(|row| {
-                row.into_iter()
-                    .map(|i| if i { black } else { white })
+                row.iter()
+                    .zip(&up_down)
+                    .into_iter()
+                    .map(|(i, d)| {
+                        if !i {
+                            &blank[..]
+                        } else {
+                            match d {
+                                Direction::Flat => &blue[..],
+                                Direction::Up => &green[..],
+                                Direction::Down => &red[..],
+                            }
+                        }
+                    })
                     .collect::<Vec<&str>>()
                     .join("")
             })
