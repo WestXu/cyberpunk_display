@@ -1,6 +1,8 @@
 use rand::Rng;
 use std::collections::vec_deque::VecDeque;
 
+use std::fmt;
+
 #[derive(Debug)]
 struct PriceQueue {
     q: VecDeque<f64>,
@@ -23,6 +25,27 @@ impl PriceQueue {
     }
 }
 
+impl fmt::Display for PriceQueue {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut s = String::from("-");
+        for i in 1..self.q.len() {
+            let p = self.q.get(i);
+            let pre_p = self.q.get(i - 1);
+
+            let char = if p == pre_p {
+                '-'
+            } else if p > pre_p {
+                '↑'
+            } else {
+                '↓'
+            };
+
+            s.push(char);
+        }
+        write!(f, "{}", s)
+    }
+}
+
 fn main() {
     let mut rng = rand::thread_rng();
 
@@ -33,6 +56,6 @@ fn main() {
     for _i in 1..20 {
         p += rng.gen_range(-10.0..10.0);
         pq.push(p);
-        println!("{:?}", pq);
+        println!("{:}", pq);
     }
 }
