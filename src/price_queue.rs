@@ -101,16 +101,11 @@ impl PriceQueue {
                 row.iter()
                     .zip(&up_down)
                     .into_iter()
-                    .map(|(i, d)| {
-                        if !i {
-                            &blank[..]
-                        } else {
-                            match d {
-                                Direction::Flat => &blue[..],
-                                Direction::Up => &green[..],
-                                Direction::Down => &red[..],
-                            }
-                        }
+                    .map(|(i, d)| match (i, d) {
+                        (false, _) => &blank[..],
+                        (true, Direction::Flat) => &blue[..],
+                        (true, Direction::Up) => &green[..],
+                        (true, Direction::Down) => &red[..],
                     })
                     .collect::<Vec<&str>>()
                     .join("")
