@@ -2,6 +2,7 @@ use ordered_float::NotNan;
 use rand::Rng;
 
 mod price_queue;
+mod rgb;
 use self::price_queue::PriceQueue;
 
 fn main() {

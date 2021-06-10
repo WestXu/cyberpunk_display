@@ -4,6 +4,9 @@ use std::fmt;
 use ansi_term::Colour::{Blue, Green, Red};
 use ordered_float::NotNan;
 
+use super::rgb::Rgb888;
+
+#[derive(Copy, Clone)]
 pub enum Direction {
     Flat,
     Up,
@@ -85,6 +88,24 @@ impl PriceQueue {
         array
     }
 
+    fn to_2d_direction_array(&self) -> Vec<Vec<Option<Direction>>> {
+        let up_down = self.get_up_down();
+
+        self.get_2d_array()
+            .iter()
+            .map(|row| {
+                row.iter()
+                    .zip(&up_down)
+                    .into_iter()
+                    .map(|(i, d)| match (i, d) {
+                        (false, _) => None,
+                        (true, d) => Some(*d),
+                    })
+                    .collect()
+            })
+            .collect()
+    }
+
     pub fn get_plot(&self) -> String {
         let (dot, blank) = ("██".to_string(), "  ".to_string());
         let (blue, green, red) = (
@@ -93,25 +114,44 @@ impl PriceQueue {
             Red.paint(&dot).to_string(),
         );
 
-        let up_down = self.get_up_down();
-
-        self.get_2d_array()
+        self.to_2d_direction_array()
             .into_iter()
             .map(|row| {
                 row.iter()
-                    .zip(&up_down)
-                    .into_iter()
-                    .map(|(i, d)| match (i, d) {
-                        (false, _) => &blank[..],
-                        (true, Direction::Flat) => &blue[..],
-                        (true, Direction::Up) => &green[..],
-                        (true, Direction::Down) => &red[..],
+                    .map(|x| match x {
+                        Some(Direction::Flat) => &blue[..],
+                        Some(Direction::Up) => &green[..],
+                        Some(Direction::Down) => &red[..],
+                        _ => &blank[..],
                     })
                     .collect::<Vec<&str>>()
                     .join("")
             })
             .collect::<Vec<String>>()
             .join("\n")
+    }
+
+    fn to_rgb888(&self) -> Vec<Vec<Rgb888>> {
+        self.to_2d_direction_array()
+            .iter()
+            .map(|row| {
+                row.iter()
+                    .map(|x| match x {
+                        Some(Direction::Flat) => Rgb888::new(0, 0, 255),
+                        Some(Direction::Up) => Rgb888::new(0, 255, 0),
+                        Some(Direction::Down) => Rgb888::new(255, 0, 0),
+                        _ => Rgb888::new(0, 0, 0),
+                    })
+                    .collect()
+            })
+            .collect()
+    }
+
+    fn to_rgb565(&self) -> Vec<Vec<u16>> {
+        self.to_rgb888()
+            .iter()
+            .map(|row| row.iter().map(|rgb888| rgb888.to_rgb565()).collect())
+            .collect()
     }
 }
 
