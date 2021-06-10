@@ -9,3 +9,4 @@ tmp/
 nohup.out
 /target
 Cargo.lock
+*.so
