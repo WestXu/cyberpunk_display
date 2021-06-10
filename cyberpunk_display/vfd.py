@@ -4,7 +4,7 @@ from typing import Dict, Literal
 import serial
 from loguru import logger
 
-from ws_coin import Huobi
+from .ws_coin import Huobi
 
 
 def to_bytes(line1=' ' * 16, line2=' ' * 16):

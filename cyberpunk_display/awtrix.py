@@ -6,8 +6,8 @@ from typing import Literal
 import aiohttp
 from loguru import logger
 
-from matrix import Matrix, PriceQueue
-from ws_coin import Huobi
+from .matrix import Matrix, PriceQueue
+from .ws_coin import Huobi
 
 
 class Awtrix:
@@ -107,8 +107,7 @@ async def push(awtrix: Awtrix):
         await awtrix.send_latest()
 
 
-if __name__ == "__main__":
-
+def main():
     async def main(loop):
         async with Awtrix() as awtrix:
             loop.create_task(data(awtrix))

@@ -6,8 +6,8 @@ from typing import Literal, Union
 import serial
 from loguru import logger
 
-from vfd import to_bytes
-from ws_coin import Huobi
+from .vfd import to_bytes
+from .ws_coin import Huobi
 
 
 def format_num(num: float) -> float:

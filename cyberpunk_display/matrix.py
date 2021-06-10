@@ -125,7 +125,7 @@ class Matrix:
         return rgb888_to_rgb565(RGB)  # 转化为RGB565
 
 
-if __name__ == "__main__":
+def main():
     import random
 
     async def main():
