@@ -7,3 +7,5 @@ __pycache__/
 .env
 tmp/
 nohup.out
+/target
+Cargo.lock
