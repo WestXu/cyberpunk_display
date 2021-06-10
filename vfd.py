@@ -110,8 +110,7 @@ if __name__ == "__main__":
         coins = {
             'btcusdt': Coin('btcusdt', 'BTC'),
             'ethusdt': Coin('ethusdt', 'ETH'),
-            'uniusdt': Coin('uniusdt', 'UNI', 4),
-            'bagsusdt': Coin('bagsusdt', 'BAGS'),
+            'dogeusdt': Coin('dogeusdt', 'DOGE', 4),
             'ethbtc': Coin('ethbtc', 'E/B', 6),
         }
         driver = Driver(vfd, coins, loop)
