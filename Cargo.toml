@@ -1,11 +1,11 @@
 [package]
-name = "cyberpunk_display_rust"
+name = "cyberpunk_display"
 version = "0.1.0"
 authors = ["WestXu <xu-lai-xi@qq.com>"]
 edition = "2018"
 
 [lib]
-name = "cyberpunk_display_rust"
+name = "cyberpunk_display"
 crate-type = ["lib", "cdylib"]
 
 [dependencies]

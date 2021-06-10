@@ -4,7 +4,7 @@ use pyo3::prelude::*;
 use super::price_queue;
 
 #[pymodule]
-fn cyberpunk_display_rust(py: Python, m: &PyModule) -> PyResult<()> {
+fn cyberpunk_display(py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<PriceQueueRust>()?;
     Ok(())
 }
