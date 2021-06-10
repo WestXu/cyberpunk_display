@@ -4,7 +4,8 @@ use std::fmt;
 use ansi_term::Colour::{Blue, Green, Red};
 use ordered_float::NotNan;
 
-use super::rgb::Rgb888;
+mod rgb;
+use rgb::Rgb888;
 
 #[derive(Copy, Clone)]
 pub enum Direction {
