@@ -4,16 +4,17 @@ import time
 from typing import Literal
 
 import aiohttp
+import numpy as np
 from loguru import logger
 
-from .matrix import Matrix, PriceQueue
+from .cyberpunk_display import PriceQueueRust
 from .ws_coin import Huobi
 
 
 class Awtrix:
     def __init__(self) -> None:
         self._q: asyncio.Queue = asyncio.Queue(maxsize=1)
-        self._pq = PriceQueue()
+        self._pq = PriceQueueRust()
 
         self._last_sent_time = 0
 
@@ -50,12 +51,7 @@ class Awtrix:
                             "type": "bmp",
                             "position": [0, 0],
                             "size": [32, 8],
-                            "data": (
-                                Matrix(await self._pq.tolist())
-                                .to_pixel()
-                                .flatten()
-                                .tolist()
-                            ),
+                            "data": sum(self._pq.to_rgb565(), []),
                         },
                         {
                             "type": "text",
@@ -75,7 +71,7 @@ class Awtrix:
             await self._q.get()
         await self._q.put(p)
 
-        await self._pq.update(p)
+        self._pq.push(p)
 
     async def send(self, p):
         await self.plot_price(p)
