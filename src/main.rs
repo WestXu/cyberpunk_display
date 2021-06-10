@@ -1,7 +1,6 @@
 use ordered_float::NotNan;
 use rand::Rng;
 
-extern crate cyberpunk_display_rust;
 use cyberpunk_display_rust::price_queue::PriceQueue;
 
 fn main() {
