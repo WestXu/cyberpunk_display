@@ -34,7 +34,7 @@ impl PriceQueue {
         }
     }
 
-    pub fn get_up_down(&self) -> Vec<Direction> {
+    pub fn to_up_down(&self) -> Vec<Direction> {
         let mut v = vec![Direction::Flat];
         for i in 1..self.q.len() {
             let p = self.q.get(i);
@@ -54,8 +54,8 @@ impl PriceQueue {
     }
 
     #[cfg(test)]
-    pub fn get_up_down_repr(&self) -> String {
-        self.get_up_down()
+    pub fn to_up_down_repr(&self) -> String {
+        self.to_up_down()
             .iter()
             .map(|d| match d {
                 Direction::Flat => '-',
@@ -65,7 +65,7 @@ impl PriceQueue {
             .collect()
     }
 
-    pub fn get_int_pos_v(&self) -> Vec<usize> {
+    pub fn to_int_pos_v(&self) -> Vec<usize> {
         let (min, max) = (self.q.iter().min().unwrap(), self.q.iter().max().unwrap());
         let rng: NotNan<f64> = max - min;
         if rng == 0.0 {
@@ -78,10 +78,10 @@ impl PriceQueue {
         }
     }
 
-    pub fn get_2d_array(&self) -> Vec<Vec<bool>> {
+    pub fn to_2d_array(&self) -> Vec<Vec<bool>> {
         let mut array = vec![vec![false; 32]; 8];
 
-        for (col, i) in self.get_int_pos_v().iter().enumerate() {
+        for (col, i) in self.to_int_pos_v().iter().enumerate() {
             array[7 - i][col] = true;
         }
 
@@ -89,9 +89,9 @@ impl PriceQueue {
     }
 
     fn to_2d_direction_array(&self) -> Vec<Vec<Option<Direction>>> {
-        let up_down = self.get_up_down();
+        let up_down = self.to_up_down();
 
-        self.get_2d_array()
+        self.to_2d_array()
             .iter()
             .map(|row| {
                 row.iter()
@@ -106,7 +106,7 @@ impl PriceQueue {
             .collect()
     }
 
-    pub fn get_plot(&self) -> String {
+    pub fn to_plot(&self) -> String {
         let (dot, blank) = ("██".to_string(), "  ".to_string());
         let (blue, green, red) = (
             Blue.paint(&dot).to_string(),
@@ -157,6 +157,6 @@ impl PriceQueue {
 
 impl fmt::Display for PriceQueue {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:}", self.get_plot())
+        write!(f, "{:}", self.to_plot())
     }
 }
