@@ -148,7 +148,7 @@ impl PriceQueue {
             .collect()
     }
 
-    fn to_rgb565(&self) -> Vec<Vec<u16>> {
+    pub fn to_rgb565(&self) -> Vec<Vec<u16>> {
         self.to_rgb888()
             .iter()
             .map(|row| row.iter().map(|rgb888| rgb888.to_rgb565()).collect())
