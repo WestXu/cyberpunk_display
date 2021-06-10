@@ -1,9 +1,8 @@
 use ordered_float::NotNan;
 use rand::Rng;
 
-mod price_queue;
-mod rgb;
-use self::price_queue::PriceQueue;
+extern crate cyberpunk_display_rust;
+use cyberpunk_display_rust::price_queue::PriceQueue;
 
 fn main() {
     let mut rng = rand::thread_rng();
