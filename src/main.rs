@@ -6,7 +6,7 @@ use cyberpunk_display::price_queue::PriceQueue;
 fn main() {
     let mut rng = rand::thread_rng();
 
-    let mut pq = PriceQueue::new();
+    let mut pq = PriceQueue::default();
 
     let mut p = NotNan::new(100.0).unwrap();
 

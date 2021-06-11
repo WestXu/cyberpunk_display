@@ -1,3 +1,4 @@
+use std::cmp::Ordering;
 use std::collections::vec_deque::VecDeque;
 use std::fmt;
 
@@ -19,12 +20,15 @@ pub struct PriceQueue {
     q: VecDeque<NotNan<f64>>,
 }
 
-impl PriceQueue {
-    pub fn new() -> PriceQueue {
-        let q = VecDeque::with_capacity(32);
-        PriceQueue { q }
+impl Default for PriceQueue {
+    fn default() -> Self {
+        PriceQueue {
+            q: VecDeque::with_capacity(32),
+        }
     }
+}
 
+impl PriceQueue {
     pub fn push(&mut self, p: NotNan<f64>) {
         if self.q.len() == 32 {
             self.q.pop_front();
@@ -41,12 +45,10 @@ impl PriceQueue {
             let p = self.q.get(i);
             let pre_p = self.q.get(i - 1);
 
-            let d: Direction = if p == pre_p {
-                Direction::Flat
-            } else if p > pre_p {
-                Direction::Up
-            } else {
-                Direction::Down
+            let d: Direction = match p.cmp(&pre_p) {
+                Ordering::Equal => Direction::Flat,
+                Ordering::Greater => Direction::Up,
+                Ordering::Less => Direction::Down,
             };
 
             v.push(d);

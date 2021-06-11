@@ -19,7 +19,7 @@ impl PriceQueueRust {
     #[new]
     pub fn new() -> Self {
         PriceQueueRust {
-            pq: price_queue::PriceQueue::new(),
+            pq: price_queue::PriceQueue::default(),
         }
     }
 

@@ -6,7 +6,7 @@ pub struct Rgb888 {
 
 impl Rgb888 {
     pub fn new(r: u8, g: u8, b: u8) -> Rgb888 {
-        Rgb888 { r: r, g: g, b: b }
+        Rgb888 { r, g, b }
     }
 
     pub fn to_rgb565(&self) -> u16 {
