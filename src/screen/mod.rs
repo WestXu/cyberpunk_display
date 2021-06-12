@@ -1,4 +1,8 @@
+pub mod character;
+mod pixels_to_string;
 mod rgb;
+
+use pixels_to_string::pixels_to_string;
 pub use rgb::Rgb888;
 
 pub struct Screen {
@@ -7,21 +11,7 @@ pub struct Screen {
 
 impl ToString for Screen {
     fn to_string(&self) -> String {
-        let (dot, blank) = ("██".to_string(), "  ".to_string());
-
-        self.pixels
-            .iter()
-            .map(|row| {
-                row.iter()
-                    .map(|x| match x {
-                        Some(rgb888) => rgb888.to_term_rgb().paint(&dot).to_string(),
-                        _ => blank.clone(),
-                    })
-                    .collect::<Vec<String>>()
-                    .join("")
-            })
-            .collect::<Vec<String>>()
-            .join("\n")
+        pixels_to_string(&self.pixels)
     }
 }
 
