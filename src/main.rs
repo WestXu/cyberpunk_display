@@ -15,6 +15,18 @@ fn main() {
         println!("{} \n", Character::new(c).to_string())
     }
 
+    println!(
+        "{} \n",
+        String::from(" 0123456789.")
+            .chars()
+            .into_iter()
+            .map(Character::new)
+            .into_iter()
+            .reduce(|a, b| a + b)
+            .unwrap()
+            .to_string()
+    );
+
     for _i in 1..20 {
         p += NotNan::new(rng.gen_range(-10.0..10.0)).unwrap();
         pq.push(p);

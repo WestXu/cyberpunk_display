@@ -1,3 +1,5 @@
+use std::ops;
+
 use super::pixels_to_string::pixels_to_string;
 use super::rgb::Rgb888;
 
@@ -11,13 +13,7 @@ impl Character {
         let x = None;
         match c {
             ' ' => Character {
-                pixels: vec![
-                    vec![x, x, x],
-                    vec![x, x, x],
-                    vec![x, x, x],
-                    vec![x, x, x],
-                    vec![x, x, x],
-                ],
+                pixels: vec![vec![x], vec![x], vec![x], vec![x], vec![x]],
             },
             '0' => Character {
                 pixels: vec![
@@ -128,5 +124,34 @@ impl Character {
 impl ToString for Character {
     fn to_string(&self) -> String {
         pixels_to_string(&self.pixels)
+    }
+}
+
+fn concat_horizontal_of_2_vecs<T: Clone>(v1: Vec<Vec<T>>, v2: Vec<Vec<T>>) -> Vec<Vec<T>> {
+    assert_eq!(v1.len(), v2.len());
+
+    v1.into_iter()
+        .zip(v2.into_iter())
+        .into_iter()
+        .map(|(row_of_v1, row_of_v2): (Vec<T>, Vec<T>)| {
+            row_of_v1
+                .iter()
+                .cloned()
+                .chain(row_of_v2.iter().cloned())
+                .collect()
+        })
+        .collect()
+}
+
+impl ops::Add<Character> for Character {
+    type Output = Character;
+
+    fn add(self, _rhs: Character) -> Character {
+        Character {
+            pixels: concat_horizontal_of_2_vecs(
+                concat_horizontal_of_2_vecs(self.pixels, Character::new(' ').pixels),
+                _rhs.pixels,
+            ),
+        }
     }
 }
