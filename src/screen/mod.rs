@@ -26,19 +26,16 @@ impl ToString for Screen {
 }
 
 impl Screen {
-    pub fn to_rgb565(&self) -> Vec<Vec<u16>> {
+    pub fn serialize(&self) -> Vec<u16> {
         self.pixels
             .iter()
-            .map(|row| {
-                row.iter()
-                    .map(|x| {
-                        (match x {
-                            Some(rgb888) => *rgb888,
-                            _ => Rgb888::new(0, 0, 0),
-                        })
-                        .to_rgb565()
-                    })
-                    .collect()
+            .flatten()
+            .map(|x| {
+                (match x {
+                    Some(rgb888) => *rgb888,
+                    _ => Rgb888::new(0, 0, 0),
+                })
+                .to_rgb565()
             })
             .collect()
     }

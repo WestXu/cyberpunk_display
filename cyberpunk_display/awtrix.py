@@ -51,7 +51,7 @@ class Awtrix:
                             "type": "bmp",
                             "position": [0, 0],
                             "size": [32, 8],
-                            "data": sum(self._pq.to_rgb565(), []),
+                            "data": self._pq.to_rgb565(),
                         },
                         {
                             "type": "text",
