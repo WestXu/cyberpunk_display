@@ -18,6 +18,8 @@ class Awtrix:
 
         self._last_sent_time = 0
 
+        self._printed = False
+
     async def __aenter__(self):
         self._ssn = aiohttp.ClientSession()
         return self
@@ -43,6 +45,9 @@ class Awtrix:
         )
 
     async def plot_price(self, p):
+        print('\x1b[8A' * self._printed + self._pq.to_plot())
+        self._printed = True
+
         await self._push(
             {
                 "draw": (
