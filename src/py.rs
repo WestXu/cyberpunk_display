@@ -33,6 +33,6 @@ impl PriceQueueRust {
     }
 
     pub fn to_rgb565(&self) -> PyResult<Vec<Vec<u16>>> {
-        Ok(self.pq.to_rgb565())
+        Ok(self.pq.to_screen().to_rgb565())
     }
 }

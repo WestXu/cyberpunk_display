@@ -2,11 +2,9 @@ use std::cmp::Ordering;
 use std::collections::vec_deque::VecDeque;
 use std::fmt;
 
-use ansi_term::Colour::{Blue, Green, Red};
 use ordered_float::NotNan;
 
-mod rgb;
-use rgb::Rgb888;
+use super::screen::{Rgb888, Screen};
 
 #[derive(Copy, Clone)]
 pub enum Direction {
@@ -109,52 +107,30 @@ impl PriceQueue {
             .collect()
     }
 
+    pub fn to_screen(&self) -> Screen {
+        let dim = 0.8;
+        let dim_max = (255.0 * dim) as u8;
+        Screen {
+            pixels: self
+                .to_2d_direction_array()
+                .iter()
+                .map(|row| {
+                    row.iter()
+                        .map(|x| match x {
+                            Some(Direction::Flat) => Some(Rgb888::new(0, 0, dim_max)),
+                            Some(Direction::Up) => Some(Rgb888::new(0, dim_max, 0)),
+                            Some(Direction::Down) => Some(Rgb888::new(dim_max, 0, 0)),
+                            _ => None,
+                        })
+                        .collect()
+                })
+                .collect::<Vec<Vec<Option<Rgb888>>>>()
+                .clone(),
+        }
+    }
+
     pub fn to_plot(&self) -> String {
-        let (dot, blank) = ("██".to_string(), "  ".to_string());
-        let (blue, green, red) = (
-            Blue.paint(&dot).to_string(),
-            Green.paint(&dot).to_string(),
-            Red.paint(&dot).to_string(),
-        );
-
-        self.to_2d_direction_array()
-            .into_iter()
-            .map(|row| {
-                row.iter()
-                    .map(|x| match x {
-                        Some(Direction::Flat) => &blue[..],
-                        Some(Direction::Up) => &green[..],
-                        Some(Direction::Down) => &red[..],
-                        _ => &blank[..],
-                    })
-                    .collect::<Vec<&str>>()
-                    .join("")
-            })
-            .collect::<Vec<String>>()
-            .join("\n")
-    }
-
-    fn to_rgb888(&self) -> Vec<Vec<Rgb888>> {
-        self.to_2d_direction_array()
-            .iter()
-            .map(|row| {
-                row.iter()
-                    .map(|x| match x {
-                        Some(Direction::Flat) => Rgb888::new(0, 0, 255),
-                        Some(Direction::Up) => Rgb888::new(0, 255, 0),
-                        Some(Direction::Down) => Rgb888::new(255, 0, 0),
-                        _ => Rgb888::new(0, 0, 0),
-                    })
-                    .collect()
-            })
-            .collect()
-    }
-
-    pub fn to_rgb565(&self) -> Vec<Vec<u16>> {
-        self.to_rgb888()
-            .iter()
-            .map(|row| row.iter().map(|rgb888| rgb888.to_rgb565()).collect())
-            .collect()
+        self.to_screen().to_string()
     }
 }
 
