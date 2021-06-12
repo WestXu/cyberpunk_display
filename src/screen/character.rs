@@ -13,6 +13,9 @@ impl Character {
         let x = None;
         match c {
             ' ' => Character {
+                pixels: vec![vec![], vec![], vec![], vec![], vec![]],
+            },
+            '|' => Character {
                 pixels: vec![vec![x], vec![x], vec![x], vec![x], vec![x]],
             },
             '0' => Character {
@@ -149,7 +152,7 @@ impl ops::Add<Character> for Character {
     fn add(self, _rhs: Character) -> Character {
         Character {
             pixels: concat_horizontal_of_2_vecs(
-                concat_horizontal_of_2_vecs(self.pixels, Character::new(' ').pixels),
+                concat_horizontal_of_2_vecs(self.pixels, Character::new('|').pixels),
                 _rhs.pixels,
             ),
         }
