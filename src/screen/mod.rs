@@ -1,5 +1,4 @@
 mod rgb;
-use ansi_term::Colour;
 pub use rgb::Rgb888;
 
 pub struct Screen {
@@ -15,7 +14,7 @@ impl ToString for Screen {
             .map(|row| {
                 row.iter()
                     .map(|x| match x {
-                        Some(Rgb888 { r, g, b }) => Colour::RGB(*r, *g, *b).paint(&dot).to_string(),
+                        Some(rgb888) => rgb888.to_term_rgb().paint(&dot).to_string(),
                         _ => blank.clone(),
                     })
                     .collect::<Vec<String>>()

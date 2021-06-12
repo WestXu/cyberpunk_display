@@ -1,13 +1,19 @@
+use ansi_term::Colour;
+
 #[derive(Clone, Copy)]
 pub struct Rgb888 {
-    pub r: u8,
-    pub g: u8,
-    pub b: u8,
+    r: u8,
+    g: u8,
+    b: u8,
 }
 
 impl Rgb888 {
     pub fn new(r: u8, g: u8, b: u8) -> Rgb888 {
         Rgb888 { r, g, b }
+    }
+
+    pub fn to_term_rgb(&self) -> Colour {
+        Colour::RGB(self.r, self.g, self.b)
     }
 
     pub fn to_rgb565(&self) -> u16 {
