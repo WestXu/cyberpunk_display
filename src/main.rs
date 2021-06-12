@@ -14,7 +14,7 @@ fn main() {
     for _i in 1..20 {
         p += NotNan::new(rng.gen_range(-10.0..10.0)).unwrap();
         pq.push(p);
-        println!("{:}", (pq.to_screen() + Screen::from_float(p)).to_string());
+        println!("{:}", pq);
         println!("\n");
     }
 }

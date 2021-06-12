@@ -53,12 +53,6 @@ class Awtrix:
                             "size": [32, 8],
                             "data": self._pq.to_rgb565(),
                         },
-                        {
-                            "type": "text",
-                            "string": f"{p:.2f}",
-                            "position": [1, 1],
-                            "color": [255, 255, 255],
-                        },
                         {"type": "show"},
                     ]
                 ),

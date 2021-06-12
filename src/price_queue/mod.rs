@@ -126,7 +126,7 @@ impl PriceQueue {
                 })
                 .collect::<Vec<Vec<Option<Rgb888>>>>()
                 .clone(),
-        }
+        } + Screen::from_float(self.q[31])
     }
 
     pub fn to_plot(&self) -> String {

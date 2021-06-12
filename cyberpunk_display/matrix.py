@@ -7,12 +7,12 @@ def main():
     import random
 
     async def main():
-        p = 0
+        p = 50000
         pq = PriceQueueRust()
 
         printed = False
         while True:
-            p += random.randint(-10, 10)
+            p += random.randint(-1000, 1000) / 100
             pq.push(p)
             print('\x1b[8A' * printed + pq.to_plot())
             printed = True
