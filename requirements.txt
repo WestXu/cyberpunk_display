@@ -1,3 +1,4 @@
 loguru
 serial
 websockets
+fire

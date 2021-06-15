@@ -1,12 +1,10 @@
 import asyncio
 import time
 from time import sleep
-from typing import Literal, Union
 
 import serial
 from loguru import logger
 
-from .vfd import to_bytes
 from .ws_coin import Huobi
 
 
@@ -84,12 +82,12 @@ async def push(nixie: Nixie):
         await nixie.send_latest()
 
 
-if __name__ == "__main__":
-    loop = asyncio.get_event_loop()
-    with Nixie(5, loop) as nixie:
+async def main(com_port: int):
+    loop = asyncio.get_running_loop()
+    with Nixie(com_port, loop) as nixie:
         nixie.set_brightness(9)
 
         loop.create_task(data(nixie))
-        loop.run_until_complete(push(nixie))
+        await push(nixie)
 
-    time.sleep(1)
+    await asyncio.sleep(1)
