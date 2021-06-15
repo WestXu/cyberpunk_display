@@ -1,21 +1,50 @@
 import asyncio
 
+from loguru import logger
+
 from .cyberpunk_display import PriceQueueRust
+from .ws_coin import Huobi
 
 
-def main():
-    import random
+class Matrix:
+    def __init__(self) -> None:
+        self._q: asyncio.Queue = asyncio.Queue(maxsize=1)
+        self._pq = PriceQueueRust()
 
-    async def main():
-        p = 50000
-        pq = PriceQueueRust()
+        self._printed = False
 
-        printed = False
+    async def update(self, p):
+        if not self._q.empty():
+            await self._q.get()
+        await self._q.put(p)
+
+        self._pq.push(p)
+
+    def _plot(self):
+        print('\x1b[8A' * self._printed + self._pq.to_plot())
+        self._printed = True
+
+    async def plot_latest(self):
+        await self._q.get()
+        self._plot()
+
+    async def _data_loop(self):
+        hb = Huobi(markets=['btcusdt'])
+        await hb._connect()
+
         while True:
-            p += random.randint(-1000, 1000) / 100
-            pq.push(p)
-            print('\x1b[8A' * printed + pq.to_plot())
-            printed = True
-            await asyncio.sleep(0.1)
+            market, p = await hb.recv_price()
+            logger.info(f"{market} {p}")
+            await self.update(p)
 
-    asyncio.run(main())
+    async def _plot_loop(self):
+        while True:
+            await self.plot_latest()
+
+    async def run(self):
+        asyncio.get_running_loop().create_task(self._data_loop())
+        await self._plot_loop()
+
+
+async def main():
+    await Matrix().run()

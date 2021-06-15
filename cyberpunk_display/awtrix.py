@@ -1,32 +1,35 @@
-import asyncio
 import json
 import time
-from typing import Literal
 
 import aiohttp
-import numpy as np
 from loguru import logger
 
-from .cyberpunk_display import PriceQueueRust
-from .ws_coin import Huobi
+from .matrix import Matrix
 
 
-class Awtrix:
-    def __init__(self) -> None:
-        self._q: asyncio.Queue = asyncio.Queue(maxsize=1)
-        self._pq = PriceQueueRust()
+class Awtrix(Matrix):
+    def __init__(self, min_interval=0.1) -> None:
+        super().__init__()
+
+        self._min_interval = min_interval
 
         self._last_sent_time = 0
-
-        self._printed = False
 
     async def __aenter__(self):
         self._ssn = aiohttp.ClientSession()
         return self
 
     async def __aexit__(self, exc_type, exc, tb):
-        await self.draw_exit()
+        await self._draw_exit()
         await self._ssn.close()
+
+    async def _draw_exit(self):
+        await self._push(
+            {
+                "draw": [{"type": "exit"}],
+            },
+            endpoint='draw',
+        )
 
     async def _push(self, data: dict, endpoint: str):
         async with self._ssn.post(
@@ -36,17 +39,13 @@ class Awtrix:
         ) as res:
             return res.text
 
-    async def draw_exit(self):
-        await self._push(
-            {
-                "draw": [{"type": "exit"}],
-            },
-            endpoint='draw',
-        )
+    async def plot_latest(self):
+        await super().plot_latest()
 
-    async def plot_price(self, p):
-        print('\x1b[8A' * self._printed + self._pq.to_plot())
-        self._printed = True
+        if time.time() - self._last_sent_time < 0.1:
+            '''小于0.1秒的间隔没有必要发送，人眼无法分辨'''
+            logger.info('Skipped sending because of too little interval.')
+            return
 
         await self._push(
             {
@@ -64,49 +63,9 @@ class Awtrix:
             },
             endpoint='draw',
         )
-
-    async def update(self, p):
-        if not self._q.empty():
-            await self._q.get()
-        await self._q.put(p)
-
-        self._pq.push(p)
-
-    async def send(self, p):
-        await self.plot_price(p)
-        logger.info(f'Sent to awtrix')
-
-    async def send_latest(self):
-        p = await self._q.get()
-        if time.time() - self._last_sent_time < 0.1:
-            '''小于0.1秒的间隔没有必要发送，人眼无法分辨'''
-            logger.info('Skipped sending because of too little interval.')
-            return
-
-        await self.send(p)
         self._last_sent_time = time.time()
 
 
-async def data(awtrix: Awtrix):
-    hb = Huobi(markets=['btcusdt'])
-    await hb._connect()
-
-    while True:
-        market, p = await hb.recv_price()
-        logger.info(f"{market} {p}")
-        await awtrix.update(p)
-
-
-async def push(awtrix: Awtrix):
-    while True:
-        await awtrix.send_latest()
-
-
-def main():
-    async def main(loop):
-        async with Awtrix() as awtrix:
-            loop.create_task(data(awtrix))
-            await push(awtrix)
-
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(main(loop))
+async def main():
+    async with Awtrix() as awtrix:
+        await awtrix.run()
