@@ -8,8 +8,11 @@ from .matrix import Matrix
 
 
 class Awtrix(Matrix):
-    def __init__(self, min_interval=0.1) -> None:
+    def __init__(self, ip='localhost', port=7000, min_interval=0.1) -> None:
         super().__init__()
+
+        self._ip = ip
+        self._port = port
 
         self._min_interval = min_interval
 
@@ -33,7 +36,7 @@ class Awtrix(Matrix):
 
     async def _push(self, data: dict, endpoint: str):
         async with self._ssn.post(
-            f'http://localhost:7000/api/v3/{endpoint}',
+            f'http://{self._ip}:{self._port}/api/v3/{endpoint}',
             data=json.dumps(data),
             headers={'Content-Type': 'application/json'},
         ) as res:
@@ -66,6 +69,6 @@ class Awtrix(Matrix):
         self._last_sent_time = time.time()
 
 
-async def main():
-    async with Awtrix() as awtrix:
+async def main(*args, **kwargs):
+    async with Awtrix(*args, **kwargs) as awtrix:
         await awtrix.run()
