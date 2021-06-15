@@ -4,22 +4,33 @@ Show Bitcoin(crypto) prices using [Nixie tube](https://en.wikipedia.org/wiki/Nix
 
 This repo is a mixed rust/python project, utilizing [maturin](https://github.com/PyO3/maturin).
 
-## How to use
+## How to install
 
-1. Make sure `python` and `cargo` accessible from command line. 
-2. Install [maturin](https://github.com/PyO3/maturin). Then `maturin develop` at `.`
-3. `pip install -e .` at `.`
-4. `cyberpunk_display awtrix` anywhere.
+1. Make sure `python` and `cargo` accessible from command line
+2. `git clone https://github.com/WestXu/cyberpunk_display --depth=1 && cd cyberpunk_display`
+3. Install [maturin](https://github.com/PyO3/maturin). Then `maturin develop && pip install -e .`
 
 ## Demo
-### nixie.py
+### nixie
+
+`cyberpunk_display nixie`
 
 ![Nixie Tube](nixie.gif)
 
-### awtrix.py
+### matrix
+
+`LOGURU_LEVEL=CRITICAL cyberpunk_display matrix`
+
+![Matrix](matrix.gif)
+
+### awtrix
+
+`cyberpunk_display awtrix --ip=localhost --port=7000`
 
 ![Awtrix](awtrix.gif)
 
-### vfd.py
+### vfd
+
+`cyberpunk_display vfd`
 
 ![VFD](vfd.gif)
