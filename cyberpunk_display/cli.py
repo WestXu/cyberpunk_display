@@ -1,28 +1,28 @@
 import fire
 
 
-async def matrix():
+async def matrix(*args, **kwargs):
     from .matrix import main
 
-    await main()
+    await main(*args, **kwargs)
 
 
-async def awtrix():
+async def awtrix(*args, **kwargs):
     from .awtrix import main
 
-    await main()
+    await main(*args, **kwargs)
 
 
-async def vfd():
+async def vfd(*args, **kwargs):
     from .vfd import main
 
-    await main()
+    await main(*args, **kwargs)
 
 
-async def nixie():
+async def nixie(*args, **kwargs):
     from .nixie import main
 
-    await main()
+    await main(*args, **kwargs)
 
 
 def main():
