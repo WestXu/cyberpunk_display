@@ -74,7 +74,7 @@ impl PriceQueue {
         } else {
             self.q
                 .iter()
-                .map(|p| ((p - min) / rng * 6.0).round() as usize)
+                .map(|p| ((p - min) / rng * 7.0).round() as usize)
                 .collect()
         }
     }
