@@ -34,7 +34,7 @@ impl Screen {
             cut_pixels = cut_pixels
                 .into_iter()
                 .map(|row| {
-                    let mut new_row = row.clone();
+                    let mut new_row = row;
                     new_row.remove(0);
                     new_row
                 })
@@ -45,7 +45,7 @@ impl Screen {
         let mut final_pixels = empty_row.clone();
         final_pixels.extend(cut_pixels);
         final_pixels.extend(empty_row.clone());
-        final_pixels.extend(empty_row.clone());
+        final_pixels.extend(empty_row);
 
         assert_eq!(final_pixels.len(), 8);
         assert_eq!(final_pixels[0].len(), 32);

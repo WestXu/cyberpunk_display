@@ -124,8 +124,7 @@ impl PriceQueue {
                         })
                         .collect()
                 })
-                .collect::<Vec<Vec<Option<Rgb888>>>>()
-                .clone(),
+                .collect::<Vec<Vec<Option<Rgb888>>>>(),
         } + Screen::from_float(self.q[31])
     }
 

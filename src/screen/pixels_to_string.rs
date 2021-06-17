@@ -1,6 +1,6 @@
 pub use super::rgb::Rgb888;
 
-pub fn pixels_to_string(pixels: &Vec<Vec<Option<Rgb888>>>) -> String {
+pub fn pixels_to_string(pixels: &[Vec<Option<Rgb888>>]) -> String {
     let (dot, blank) = ("██".to_string(), "  ".to_string());
 
     pixels

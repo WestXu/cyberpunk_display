@@ -2,7 +2,6 @@ use ordered_float::NotNan;
 use rand::Rng;
 
 use cyberpunk_display::price_queue::PriceQueue;
-use cyberpunk_display::screen::Screen;
 
 fn main() {
     let mut rng = rand::thread_rng();
