@@ -13,6 +13,10 @@ rand = "0.8.3"
 ordered-float = "2.0"
 ansi_term = "0.12.1"
 pyo3 = "0.13.2"
+tungstenite = '*'
+url = '*'
+env_logger = "*"
+flate2 = "*"
 
 [features]
 extension-module = ["pyo3/extension-module"]
