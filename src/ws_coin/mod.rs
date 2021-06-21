@@ -48,14 +48,8 @@ impl Iterator for WsCoin {
                 pong(&mut self.socket, ping);
                 self.next()
             }
-            Msg::Subscribed(ch) => {
-                println!("Parsed: {:?}", ch);
-                self.next()
-            }
-            Msg::Price(p) => {
-                println!("Parsed: {:?}", p);
-                Some(p)
-            }
+            Msg::Subscribed(_) => self.next(),
+            Msg::Price(p) => Some(p),
         }
     }
 }
