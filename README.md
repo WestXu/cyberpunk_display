@@ -8,7 +8,7 @@ This repo is a mixed rust/python project, utilizing [maturin](https://github.com
 
 1. Make sure `python` and `cargo` accessible from command line
 2. `git clone https://github.com/WestXu/cyberpunk_display --depth=1 && cd cyberpunk_display`
-3. Install [maturin](https://github.com/PyO3/maturin). Then `maturin develop && pip install -e .`
+3. Install [maturin](https://github.com/PyO3/maturin). Then `maturin develop --release && pip install -e .`
 
 ## Demo
 ### nixie
