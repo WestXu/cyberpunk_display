@@ -44,12 +44,18 @@ impl Iterator for WsCoin {
         let mut s = String::new();
         gz.read_to_string(&mut s).unwrap();
         match parse_json(&s) {
-            Msg::Ping(ping) => {
-                pong(&mut self.socket, ping);
+            Ok(msg) => match msg {
+                Msg::Ping(ping) => {
+                    pong(&mut self.socket, ping);
+                    self.next()
+                }
+                Msg::Subscribed(_) => self.next(),
+                Msg::Price(p) => Some(p),
+            },
+            Err(error) => {
+                println!("Error {} happened parsing json: {}", error, &s);
                 self.next()
             }
-            Msg::Subscribed(_) => self.next(),
-            Msg::Price(p) => Some(p),
         }
     }
 }

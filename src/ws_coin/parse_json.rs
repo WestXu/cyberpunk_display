@@ -1,3 +1,5 @@
+use std::error::Error;
+
 use ordered_float::NotNan;
 use serde::Deserialize;
 
@@ -44,19 +46,15 @@ struct TickData {
     // direction: String,
 }
 
-pub fn parse_json(data: &str) -> Msg {
-    let fail_msg = format!("Failed parsing data: {}", data);
-
-    let v: Received = serde_json::from_str(data).expect(&fail_msg);
-
-    match v {
+pub fn parse_json(data: &str) -> Result<Msg, Box<dyn Error>> {
+    Ok(match serde_json::from_str::<Received>(data)? {
         Received::Ping { ping } => Msg::Ping(ping),
         Received::Subscribed { status, subbed } => {
-            assert_eq!(status, "ok", "{}", fail_msg);
+            assert_eq!(status, "ok", "Failed subscribe {}", subbed);
             Msg::Subscribed(subbed)
         }
-        Received::Price { tick } => Msg::Price(NotNan::new(tick.data[0].price).expect(&fail_msg)),
-    }
+        Received::Price { tick } => Msg::Price(NotNan::new(tick.data[0].price)?),
+    })
 }
 
 #[test]
