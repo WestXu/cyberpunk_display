@@ -1,11 +1,20 @@
 use ordered_float::NotNan;
-use serde_json::Value;
+use serde::{Deserialize, Serialize};
+use serde_json::Result;
+use serde_json::{Map, Value};
 
 #[derive(Debug)]
 pub enum Msg {
     Ping(u64),
     Subscribed(String),
     Price(NotNan<f64>),
+}
+
+#[derive(Serialize, Deserialize)]
+struct Person {
+    name: String,
+    age: u8,
+    phones: Vec<String>,
 }
 
 pub fn parse_json(data: &str) -> Msg {
