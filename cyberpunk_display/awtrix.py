@@ -4,13 +4,11 @@ import time
 import aiohttp
 from loguru import logger
 
-from .matrix import Matrix
+from .cyberpunk_display import PriceQueueRust, WsCoinRust
 
 
-class Awtrix(Matrix):
+class Awtrix:
     def __init__(self, ip='localhost', port=7000, min_interval=0.1) -> None:
-        super().__init__()
-
         self._ip = ip
         self._port = port
 
@@ -42,9 +40,7 @@ class Awtrix(Matrix):
         ) as res:
             return res.text
 
-    async def plot_latest(self):
-        await super().plot_latest()
-
+    async def plot(self, pq):
         if time.time() - self._last_sent_time < 0.1:
             '''小于0.1秒的间隔没有必要发送，人眼无法分辨'''
             logger.info('Skipped sending because of too little interval.')
@@ -58,7 +54,7 @@ class Awtrix(Matrix):
                             "type": "bmp",
                             "position": [0, 0],
                             "size": [32, 8],
-                            "data": self._pq.to_rgb565(),
+                            "data": pq.to_rgb565(),
                         },
                         {"type": "show"},
                     ]
@@ -71,4 +67,10 @@ class Awtrix(Matrix):
 
 async def main(*args, **kwargs):
     async with Awtrix(*args, **kwargs) as awtrix:
-        await awtrix.run()
+        pq = PriceQueueRust()
+
+        print("\n\n\n\n\n\n\n\n")
+        for p in WsCoinRust():
+            pq.push(p)
+            print(f"\x1b[8A{pq.to_plot()}")
+            await awtrix.plot(pq)
