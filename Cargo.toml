@@ -9,9 +9,9 @@ name = "cyberpunk_display"
 crate-type = ["lib", "cdylib"]
 
 [dependencies]
-ordered-float = "2.0"
-ansi_term = "0.12.1"
-pyo3 = "0.13.2"
+ordered-float = "*"
+ansi_term = "*"
+pyo3 = "*"
 tungstenite = '*'
 url = '*'
 env_logger = "*"
