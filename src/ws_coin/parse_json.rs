@@ -1,7 +1,5 @@
 use ordered_float::NotNan;
-use serde::{Deserialize, Serialize};
-use serde_json::Result;
-use serde_json::{Map, Value};
+use serde::Deserialize;
 
 #[derive(Debug)]
 pub enum Msg {
@@ -10,36 +8,92 @@ pub enum Msg {
     Price(NotNan<f64>),
 }
 
-#[derive(Serialize, Deserialize)]
-struct Person {
-    name: String,
-    age: u8,
-    phones: Vec<String>,
+#[derive(Deserialize, Debug)]
+#[serde(untagged)]
+enum Received {
+    Ping {
+        ping: u64,
+    },
+    Subscribed {
+        // id: String,
+        status: String,
+        subbed: String,
+        // ts: u64,
+    },
+    Price {
+        // ch: String,
+        // ts: u64,
+        tick: Tick,
+    },
+}
+
+#[derive(Deserialize, Debug)]
+struct Tick {
+    // id: u64,
+    // ts: u64,
+    data: Vec<TickData>,
+}
+
+#[derive(Deserialize, Debug)]
+struct TickData {
+    // id: u128, an open issue https://github.com/serde-rs/serde/issues/1682
+    // ts: u64,
+    // tradeId: u64,
+    // amount: f64,
+    price: f64,
+    // direction: String,
 }
 
 pub fn parse_json(data: &str) -> Msg {
     let fail_msg = format!("Failed parsing data: {}", data);
-    let v: Value = serde_json::from_str(data).expect(&fail_msg);
 
-    assert!(v.is_object());
-    let o = v.as_object().expect(&fail_msg);
+    let v: Received = serde_json::from_str(data).expect(&fail_msg);
 
-    if o.contains_key("status") {
-        assert_eq!(v["status"], "ok", "{}", fail_msg);
-        return Msg::Subscribed(
-            o.get("subbed")
-                .expect(&fail_msg)
-                .as_str()
-                .expect(&fail_msg)
-                .to_string(),
-        );
+    match v {
+        Received::Ping { ping } => Msg::Ping(ping),
+        Received::Subscribed { status, subbed } => {
+            assert_eq!(status, "ok", "{}", fail_msg);
+            Msg::Subscribed(subbed)
+        }
+        Received::Price { tick } => Msg::Price(NotNan::new(tick.data[0].price).expect(&fail_msg)),
     }
+}
 
-    if o.contains_key("ping") {
-        return Msg::Ping(v["ping"].as_u64().expect(&fail_msg));
-    }
-
-    Msg::Price(
-        NotNan::new(v["tick"]["data"][0]["price"].as_f64().expect(&fail_msg)).expect(&fail_msg),
+#[test]
+fn test_parse_json() {
+    let msgs: Vec<Received> = serde_json::from_str(
+        r#"
+        [
+            {
+                "id": "btcusdt",
+                "status": "ok",
+                "subbed": "market.btcusdt.trade.detail",
+                "ts": 1624332964918
+            },
+            {
+                "ch": "market.btcusdt.trade.detail",
+                "ts": 1624332964575,
+                "tick": {
+                    "id": 131421049089,
+                    "ts": 1624332964573,
+                    "data": [
+                        {
+                            "id": 131421049089304937968219549,
+                            "ts": 1624332964573,
+                            "tradeId": 102482210043,
+                            "amount": 0.006077,
+                            "price": 32942.44,
+                            "direction": "sell"
+                        }
+                    ]
+                }
+            },
+            {
+                "ping": 1624332968042
+            }
+        ]
+        "#,
     )
+    .unwrap();
+    println!("{:#?}", msgs);
 }
