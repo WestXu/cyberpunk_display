@@ -1,10 +1,10 @@
 import fire
 
 
-async def matrix(*args, **kwargs):
+def matrix(*args, **kwargs):
     from .matrix import main
 
-    await main(*args, **kwargs)
+    main(*args, **kwargs)
 
 
 async def awtrix(*args, **kwargs):
