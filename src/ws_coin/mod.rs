@@ -22,23 +22,23 @@ pub struct WsCoin {
 
 impl Default for WsCoin {
     fn default() -> Self {
-        let (mut socket, _) =
-            connect(Url::parse("wss://api.hadax.com/ws").unwrap()).expect("Can't connect");
-
-        socket
-            .write_message(Message::Text(
-                r#"{"sub": "market.btcusdt.trade.detail", "id": "btcusdt"}"#.into(),
-            ))
-            .unwrap();
-
-        WsCoin { socket }
+        WsCoin {
+            socket: Self::connect(),
+        }
     }
 }
 
 impl Iterator for WsCoin {
     type Item = NotNan<f64>;
     fn next(&mut self) -> Option<Self::Item> {
-        let msg = self.socket.read_message().expect("Error reading message");
+        let msg = match self.socket.read_message() {
+            Ok(msg) => msg,
+            Err(error) => {
+                println!("Error {} happened receiving", error);
+                self.reconnect();
+                return self.next();
+            }
+        };
         let msg_binary = msg.into_data();
         let mut gz = GzDecoder::new(&msg_binary[..]);
         let mut s = String::new();
@@ -46,7 +46,7 @@ impl Iterator for WsCoin {
         match parse_json(&s) {
             Ok(msg) => match msg {
                 Msg::Ping(ping) => {
-                    pong(&mut self.socket, ping);
+                    self.pong(ping);
                     self.next()
                 }
                 Msg::Subscribed(_) => self.next(),
@@ -60,18 +60,35 @@ impl Iterator for WsCoin {
     }
 }
 
-pub fn pong(
-    socket: &mut tungstenite::WebSocket<
+impl WsCoin {
+    fn connect() -> tungstenite::WebSocket<
         tungstenite::stream::Stream<
             std::net::TcpStream,
             native_tls::TlsStream<std::net::TcpStream>,
         >,
-    >,
-    ping: u64,
-) {
-    socket
-        .write_message(tungstenite::Message::Text(
+    > {
+        let (mut socket, _) =
+            connect(Url::parse("wss://api.hadax.com/ws").unwrap()).expect("Can't connect");
+
+        socket
+            .write_message(Message::Text(
+                r#"{"sub": "market.btcusdt.trade.detail", "id": "btcusdt"}"#.into(),
+            ))
+            .unwrap();
+
+        socket
+    }
+
+    fn reconnect(&mut self) {
+        self.socket = Self::connect()
+    }
+
+    fn pong(&mut self, ping: u64) {
+        if let Err(error) = self.socket.write_message(tungstenite::Message::Text(
             json!({ "pong": ping }).to_string(),
-        ))
-        .unwrap();
+        )) {
+            println!("Error {} happened ponging", error);
+            self.reconnect()
+        }
+    }
 }
