@@ -137,11 +137,7 @@ fn concat_horizontal_of_2_vecs<T: Clone>(v1: Vec<Vec<T>>, v2: Vec<Vec<T>>) -> Ve
         .zip(v2.into_iter())
         .into_iter()
         .map(|(row_of_v1, row_of_v2): (Vec<T>, Vec<T>)| {
-            row_of_v1
-                .iter()
-                .cloned()
-                .chain(row_of_v2.iter().cloned())
-                .collect()
+            row_of_v1.into_iter().chain(row_of_v2.into_iter()).collect()
         })
         .collect()
 }
