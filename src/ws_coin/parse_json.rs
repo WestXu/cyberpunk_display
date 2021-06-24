@@ -10,7 +10,7 @@ pub enum Msg {
     Price(NotNan<f64>),
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, PartialEq, Debug)]
 #[serde(untagged)]
 enum Received {
     Ping {
@@ -29,14 +29,14 @@ enum Received {
     },
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, PartialEq, Debug)]
 struct Tick {
     // id: u64,
     // ts: u64,
     data: Vec<TickData>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, PartialEq, Debug)]
 struct TickData {
     // id: u128, an open issue https://github.com/serde-rs/serde/issues/1682
     // ts: u64,
@@ -93,5 +93,22 @@ fn test_parse_json() {
         "#,
     )
     .unwrap();
-    println!("{:#?}", msgs);
+
+    assert_eq!(
+        msgs,
+        [
+            Received::Subscribed {
+                status: "ok".to_string(),
+                subbed: "market.btcusdt.trade.detail".to_string(),
+            },
+            Received::Price {
+                tick: Tick {
+                    data: vec!(TickData { price: 32942.44 },),
+                },
+            },
+            Received::Ping {
+                ping: 1624332968042,
+            },
+        ]
+    );
 }
