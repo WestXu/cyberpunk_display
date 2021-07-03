@@ -42,7 +42,11 @@ impl Iterator for WsCoin {
         let msg_binary = msg.into_data();
         let mut gz = GzDecoder::new(&msg_binary[..]);
         let mut s = String::new();
-        gz.read_to_string(&mut s).unwrap();
+
+        if let Err(error) = gz.read_to_string(&mut s) {
+            println!("Error {} happened decompressing", error);
+            return self.next();
+        };
         match parse_json(&s) {
             Ok(msg) => match msg {
                 Msg::Ping(ping) => {
