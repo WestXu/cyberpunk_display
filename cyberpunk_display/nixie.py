@@ -45,8 +45,8 @@ class Nixie:
         sleep(1)
         self.ser.close()
 
-    def set_brightness(self, brightness: int = 9):
-        assert 0 <= brightness <= 9
+    def set_brightness(self, brightness: int = 8):
+        assert 0 <= brightness <= 8
         self.ser.write(f'TIMB{brightness}'.encode())
 
     async def update(self, p: float):
@@ -85,7 +85,7 @@ async def push(nixie: Nixie):
 async def main(com_port: int):
     loop = asyncio.get_running_loop()
     with Nixie(com_port, loop) as nixie:
-        nixie.set_brightness(9)
+        nixie.set_brightness(8)
 
         loop.create_task(data(nixie))
         await push(nixie)
