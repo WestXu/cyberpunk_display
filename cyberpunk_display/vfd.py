@@ -87,7 +87,7 @@ class Driver:
             )
             await self.vfd.send(
                 to_bytes(
-                    self.coins['btcusdt'].line,
+                    self.coins['ethusdt'].line,
                     line2,
                 )
             )
@@ -103,15 +103,14 @@ class Driver:
         await self.push_run()
 
 
-async def main(com_port:int):
+async def main(com_port: int):
     loop = asyncio.get_running_loop()
     with serial.Serial(f'COM{com_port}') as ser:
         vfd = VFD(ser, loop)
         coins = {
-            'btcusdt': Coin('btcusdt', 'BTC'),
             'ethusdt': Coin('ethusdt', 'ETH'),
-            'dogeusdt': Coin('dogeusdt', 'DOGE', 4),
             'ethbtc': Coin('ethbtc', 'E/B', 6),
+            'dogeusdt': Coin('dogeusdt', 'DOGE', 4),
         }
         driver = Driver(vfd, coins, loop)
         await driver.start()
