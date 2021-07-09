@@ -1,5 +1,8 @@
 pub mod parse_json;
 
+use std::thread;
+use std::time::Duration;
+
 use tungstenite::{connect, Message};
 use url::Url;
 
@@ -84,6 +87,7 @@ impl WsCoin {
     }
 
     fn reconnect(&mut self) {
+        thread::sleep(Duration::from_secs(60));
         self.socket = Self::connect()
     }
 
