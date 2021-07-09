@@ -34,3 +34,7 @@ def main():
             "nixie": nixie,
         }
     )
+
+
+if __name__ == "__main__":
+    main()
