@@ -15,9 +15,12 @@ pyo3 = "*"
 tungstenite = '*'
 url = '*'
 flate2 = "*"
-serde = { version="*", features=["derive"] }
+serde = { version = "*", features = ["derive"] }
 serde_json = "*"
 native-tls = "*"
+
+[dev-dependencies]
+rand = "*"
 
 [features]
 extension-module = ["pyo3/extension-module"]
