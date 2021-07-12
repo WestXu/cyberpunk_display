@@ -104,14 +104,7 @@ impl Iterator for WsCoin {
 }
 
 impl WsCoin {
-    fn connect(
-        &self,
-    ) -> tungstenite::WebSocket<
-        tungstenite::stream::Stream<
-            std::net::TcpStream,
-            native_tls::TlsStream<std::net::TcpStream>,
-        >,
-    > {
+    fn connect(&mut self) {
         let (mut socket, _) =
             connect(Url::parse("wss://api.hadax.com/ws").unwrap()).expect("Can't connect");
 
@@ -124,12 +117,12 @@ impl WsCoin {
                 .unwrap();
         }
 
-        socket
+        self.socket = Some(socket);
     }
 
     fn reconnect(&mut self) {
         thread::sleep(Duration::from_secs(60));
-        self.socket = Some(self.connect())
+        self.connect()
     }
 
     fn pong(&mut self, ping: u64) {
