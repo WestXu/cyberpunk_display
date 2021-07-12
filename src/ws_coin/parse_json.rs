@@ -7,7 +7,7 @@ use serde::Deserialize;
 pub enum Msg {
     Ping(u64),
     Subscribed(String),
-    Price(NotNan<f64>),
+    Price { symbol: String, price: NotNan<f64> },
 }
 
 #[derive(Deserialize, PartialEq, Debug)]
@@ -23,7 +23,7 @@ enum Received {
         // ts: u64,
     },
     Price {
-        // ch: String,
+        ch: String,
         // ts: u64,
         tick: Tick,
     },
@@ -53,7 +53,10 @@ pub fn parse_json(data: &str) -> Result<Msg, Box<dyn Error>> {
             assert_eq!(status, "ok", "Failed subscribe {}", subbed);
             Msg::Subscribed(subbed)
         }
-        Received::Price { tick } => Msg::Price(NotNan::new(tick.data[0].price)?),
+        Received::Price { ch, tick } => Msg::Price {
+            symbol: ch.replace("market.", "").replace(".trade.detail", ""),
+            price: NotNan::new(tick.data[0].price)?,
+        },
     })
 }
 
@@ -102,6 +105,7 @@ fn test_parse_json() {
                 subbed: "market.btcusdt.trade.detail".to_string(),
             },
             Received::Price {
+                ch: "market.btcusdt.trade.detail".to_string(),
                 tick: Tick {
                     data: vec!(TickData { price: 32942.44 },),
                 },

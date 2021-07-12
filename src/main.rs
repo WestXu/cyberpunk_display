@@ -6,7 +6,7 @@ fn main() {
 
     println!("\n\n\n\n\n\n\n\n");
     for p in WsCoin::default() {
-        pq.push(p);
+        pq.push(p.price);
         println!("\x1b[8A{}", pq)
     }
 }

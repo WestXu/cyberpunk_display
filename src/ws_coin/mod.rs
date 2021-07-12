@@ -14,11 +14,24 @@ use std::io::Read;
 
 use parse_json::{parse_json, Msg};
 
+pub struct Price {
+    pub name: String,
+    pub price: NotNan<f64>,
+}
+
+pub struct Market {
+    symbol: String,
+    name: String,
+}
+
 pub struct WsCoin {
-    socket: tungstenite::WebSocket<
-        tungstenite::stream::Stream<
-            std::net::TcpStream,
-            native_tls::TlsStream<std::net::TcpStream>,
+    markets: Vec<Market>,
+    socket: Option<
+        tungstenite::WebSocket<
+            tungstenite::stream::Stream<
+                std::net::TcpStream,
+                native_tls::TlsStream<std::net::TcpStream>,
+            >,
         >,
     >,
 }
@@ -26,15 +39,26 @@ pub struct WsCoin {
 impl Default for WsCoin {
     fn default() -> Self {
         WsCoin {
-            socket: Self::connect(),
+            markets: vec![Market {
+                symbol: "btcusdt".to_string(),
+                name: "BTC".to_string(),
+            }],
+            socket: None,
         }
     }
 }
 
 impl Iterator for WsCoin {
-    type Item = NotNan<f64>;
+    type Item = Price;
     fn next(&mut self) -> Option<Self::Item> {
-        let msg = match self.socket.read_message() {
+        let socket = match self.socket.as_mut() {
+            None => {
+                self.connect();
+                self.socket.as_mut().unwrap()
+            }
+            Some(socket) => socket,
+        };
+        let msg = match socket.read_message() {
             Ok(msg) => msg,
             Err(error) => {
                 println!("Error {} happened receiving", error);
@@ -57,7 +81,19 @@ impl Iterator for WsCoin {
                     self.next()
                 }
                 Msg::Subscribed(_) => self.next(),
-                Msg::Price(p) => Some(p),
+                Msg::Price { symbol, price: p } => Some(Price {
+                    name: {
+                        let mut name = None;
+                        for market in &self.markets {
+                            if market.symbol == symbol {
+                                name = Some(market.name.clone());
+                                break;
+                            }
+                        }
+                        name.unwrap()
+                    },
+                    price: p,
+                }),
             },
             Err(error) => {
                 println!("Error {} happened parsing json: {}", error, &s);
@@ -68,7 +104,9 @@ impl Iterator for WsCoin {
 }
 
 impl WsCoin {
-    fn connect() -> tungstenite::WebSocket<
+    fn connect(
+        &self,
+    ) -> tungstenite::WebSocket<
         tungstenite::stream::Stream<
             std::net::TcpStream,
             native_tls::TlsStream<std::net::TcpStream>,
@@ -77,24 +115,32 @@ impl WsCoin {
         let (mut socket, _) =
             connect(Url::parse("wss://api.hadax.com/ws").unwrap()).expect("Can't connect");
 
-        socket
-            .write_message(Message::Text(
-                r#"{"sub": "market.btcusdt.trade.detail", "id": "btcusdt"}"#.into(),
-            ))
-            .unwrap();
+        for market in &self.markets {
+            socket
+                .write_message(Message::Text(format!(
+                    "{{\"sub\": \"market.{}.trade.detail\", \"id\": \"{}\"}}",
+                    market.symbol, market.symbol
+                )))
+                .unwrap();
+        }
 
         socket
     }
 
     fn reconnect(&mut self) {
         thread::sleep(Duration::from_secs(60));
-        self.socket = Self::connect()
+        self.socket = Some(self.connect())
     }
 
     fn pong(&mut self, ping: u64) {
-        if let Err(error) = self.socket.write_message(tungstenite::Message::Text(
-            json!({ "pong": ping }).to_string(),
-        )) {
+        if let Err(error) = self
+            .socket
+            .as_mut()
+            .unwrap()
+            .write_message(tungstenite::Message::Text(
+                json!({ "pong": ping }).to_string(),
+            ))
+        {
             println!("Error {} happened ponging", error);
             self.reconnect()
         }

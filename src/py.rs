@@ -61,6 +61,6 @@ impl PyIterProtocol for WsCoinRust {
         slf
     }
     fn __next__(mut slf: PyRefMut<Self>) -> Option<f64> {
-        slf.ws_coin.next().map(|notnan| notnan.into())
+        slf.ws_coin.next().map(|p| p.price.into())
     }
 }
