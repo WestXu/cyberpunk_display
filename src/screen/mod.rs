@@ -15,6 +15,14 @@ pub struct Screen {
     pub pixels: Vec<Vec<Option<Rgb888>>>,
 }
 
+impl Default for Screen {
+    fn default() -> Self {
+        Screen {
+            pixels: vec![vec![None; 32]; 8],
+        }
+    }
+}
+
 impl ToString for Screen {
     fn to_string(&self) -> String {
         pixels_to_string(&self.pixels)
@@ -22,36 +30,34 @@ impl ToString for Screen {
 }
 
 impl Screen {
+    fn _is_in_screen(x: usize, y: usize) -> bool {
+        (x <= 31) & (y <= 7)
+    }
+    pub fn draw(&mut self, pixels: &Vec<Vec<Option<Rgb888>>>, x0: usize, y0: usize) -> &Self {
+        let height = pixels.len();
+        let width = pixels[0].len();
+
+        assert!(
+            Self::_is_in_screen(x0, y0),
+            "Starting point ({}, {}) is out of screen",
+            x0,
+            y0
+        );
+
+        for x in 0..width {
+            for y in 0..height {
+                if Self::_is_in_screen(x + x0, y + y0) {
+                    self.pixels[y + y0][x + x0] = pixels[y][x];
+                }
+            }
+        }
+
+        self
+    }
     pub fn from_chars(cs: Character) -> Self {
-        let mut filled_cs = cs + Character::new(' '); // 右边加一列空像素
-        while filled_cs.pixels[0].len() <= 31 {
-            filled_cs = Character::new(' ') + filled_cs
-        }
-
-        let mut cut_pixels = filled_cs.pixels;
-
-        while cut_pixels[0].len() >= 33 {
-            cut_pixels = cut_pixels
-                .into_iter()
-                .map(|row| {
-                    let mut new_row = row;
-                    new_row.remove(0);
-                    new_row
-                })
-                .collect()
-        }
-
-        let empty_row = vec![vec![None; 32]];
-        let mut final_pixels = empty_row.clone();
-        final_pixels.extend(cut_pixels);
-        final_pixels.extend(empty_row.clone());
-        final_pixels.extend(empty_row);
-
-        assert_eq!(final_pixels.len(), 8);
-        assert_eq!(final_pixels[0].len(), 32);
-        Screen {
-            pixels: final_pixels,
-        }
+        let mut screen = Screen::default();
+        screen.draw(&cs.pixels, 32 - (cs.pixels[0].len() + 1), 1);
+        screen
     }
     pub fn from_float(p: NotNan<f64>) -> Self {
         let cs: Character = format!("{:.2}", p)
