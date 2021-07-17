@@ -1,10 +1,7 @@
-from .cyberpunk_display import PriceQueueRust, WsCoinRust
+from .cyberpunk_display import BtcMatrixRust
 
 
 def main():
-    pq = PriceQueueRust()
-
     print("\n\n\n\n\n\n\n\n")
-    for p in WsCoinRust():
-        pq.push(p)
-        print(f"\x1b[8A{pq.to_plot()}")
+    for plot, _ in BtcMatrixRust():
+        print(f"\x1b[8A{plot}")

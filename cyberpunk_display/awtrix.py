@@ -1,10 +1,11 @@
 import json
 import time
+from typing import List
 
 import aiohttp
 from loguru import logger
 
-from .cyberpunk_display import PriceQueueRust, WsCoinRust
+from .cyberpunk_display import BtcEthMatrixRust
 
 
 class Awtrix:
@@ -40,7 +41,7 @@ class Awtrix:
         ) as res:
             return res.text
 
-    async def plot(self, pq):
+    async def plot(self, rgb565: List[int]):
         if time.time() - self._last_sent_time < 0.1:
             '''小于0.1秒的间隔没有必要发送，人眼无法分辨'''
             logger.info('Skipped sending because of too little interval.')
@@ -54,7 +55,7 @@ class Awtrix:
                             "type": "bmp",
                             "position": [0, 0],
                             "size": [32, 8],
-                            "data": pq.to_rgb565(),
+                            "data": rgb565,
                         },
                         {"type": "show"},
                     ]
@@ -67,10 +68,10 @@ class Awtrix:
 
 async def main(*args, **kwargs):
     async with Awtrix(*args, **kwargs) as awtrix:
-        pq = PriceQueueRust()
-
         print("\n\n\n\n\n\n\n\n")
-        for p in WsCoinRust():
-            pq.push(p)
-            print(f"\x1b[8A{pq.to_plot()}")
-            await awtrix.plot(pq)
+        for (
+            plot,
+            rgb565,
+        ) in BtcEthMatrixRust():
+            print(f"\x1b[8A{plot}")
+            await awtrix.plot(rgb565)
