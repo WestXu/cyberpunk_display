@@ -6,7 +6,7 @@ mod rgb;
 
 use ordered_float::NotNan;
 
-use character::Character;
+use character::{Character, Font};
 
 use pixels_to_string::pixels_to_string;
 pub use rgb::Rgb888;
@@ -63,7 +63,7 @@ impl Screen {
         let cs: Character = format!("{:.2}", p)
             .chars()
             .into_iter()
-            .map(Character::new)
+            .map(|c| Character::new(c, Font::Large))
             .into_iter()
             .reduce(|a, b| a + b)
             .unwrap();
