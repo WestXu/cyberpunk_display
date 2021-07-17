@@ -1,5 +1,7 @@
 pub mod parse_json;
 
+use std::error::Error;
+use std::fmt;
 use std::thread;
 use std::time::Duration;
 
@@ -23,6 +25,25 @@ pub struct Price {
 pub struct Market {
     pub symbol: String,
     pub name: String,
+}
+
+#[derive(Debug)]
+pub enum RecvError {
+    RecevingError(String),
+    DecopmressionError(String),
+    ParsingError(String),
+}
+
+impl Error for RecvError {}
+
+impl fmt::Display for RecvError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            RecvError::RecevingError(err_str) => write!(f, "{}", err_str),
+            RecvError::DecopmressionError(err_str) => write!(f, "{}", err_str),
+            RecvError::ParsingError(err_str) => write!(f, "{}", err_str),
+        }
+    }
 }
 
 pub struct WsCoin {
@@ -52,53 +73,17 @@ impl Default for WsCoin {
 impl Iterator for WsCoin {
     type Item = Price;
     fn next(&mut self) -> Option<Self::Item> {
-        let socket = match self.socket.as_mut() {
-            None => {
-                self.connect();
-                self.socket.as_mut().unwrap()
-            }
-            Some(socket) => socket,
-        };
-        let msg = match socket.read_message() {
-            Ok(msg) => msg,
+        match self.recv_price() {
+            Ok(price) => Some(price),
             Err(error) => {
-                println!("Error {} happened receiving", error);
-                self.reconnect();
-                return self.next();
-            }
-        };
-        let msg_binary = msg.into_data();
-        let mut gz = GzDecoder::new(&msg_binary[..]);
-        let mut s = String::new();
-
-        if let Err(error) = gz.read_to_string(&mut s) {
-            println!("Error {} happened decompressing", error);
-            return self.next();
-        };
-        match parse_json(&s) {
-            Ok(msg) => match msg {
-                Msg::Ping(ping) => {
-                    self.pong(ping);
-                    self.next()
+                println!("{}", error);
+                match error {
+                    RecvError::RecevingError(_) => {
+                        self.reconnect();
+                        self.next()
+                    }
+                    RecvError::DecopmressionError(_) | RecvError::ParsingError(_) => self.next(),
                 }
-                Msg::Subscribed(_) => self.next(),
-                Msg::Price { symbol, price: p } => Some(Price {
-                    name: {
-                        let mut name = None;
-                        for market in &self.markets {
-                            if market.symbol == symbol {
-                                name = Some(market.name.clone());
-                                break;
-                            }
-                        }
-                        name.unwrap()
-                    },
-                    price: p,
-                }),
-            },
-            Err(error) => {
-                println!("Error {} happened parsing json: {}", error, &s);
-                self.next()
             }
         }
     }
@@ -124,6 +109,62 @@ impl WsCoin {
     fn reconnect(&mut self) {
         thread::sleep(Duration::from_secs(60));
         self.connect()
+    }
+
+    fn recv_price(&mut self) -> Result<Price, RecvError> {
+        let socket = match self.socket.as_mut() {
+            None => {
+                self.connect();
+                self.socket.as_mut().unwrap()
+            }
+            Some(socket) => socket,
+        };
+        let msg = match socket.read_message() {
+            Ok(msg) => msg,
+            Err(error) => {
+                return Err(RecvError::RecevingError(format!(
+                    "Error {} happened receiving",
+                    error
+                )));
+            }
+        };
+        let msg_binary = msg.into_data();
+        let mut gz = GzDecoder::new(&msg_binary[..]);
+        let mut s = String::new();
+
+        if let Err(error) = gz.read_to_string(&mut s) {
+            return Err(RecvError::DecopmressionError(format!(
+                "Error {} happened decompressing",
+                error
+            )));
+        };
+
+        match parse_json(&s) {
+            Ok(msg) => match msg {
+                Msg::Ping(ping) => {
+                    self.pong(ping);
+                    self.recv_price()
+                }
+                Msg::Subscribed(_) => self.recv_price(),
+                Msg::Price { symbol, price: p } => Ok(Price {
+                    name: {
+                        let mut name = None;
+                        for market in &self.markets {
+                            if market.symbol == symbol {
+                                name = Some(market.name.clone());
+                                break;
+                            }
+                        }
+                        name.unwrap()
+                    },
+                    price: p,
+                }),
+            },
+            Err(error) => Err(RecvError::ParsingError(format!(
+                "Error {} happened parsing json: {}",
+                error, &s
+            ))),
+        }
     }
 
     fn pong(&mut self, ping: u64) {
