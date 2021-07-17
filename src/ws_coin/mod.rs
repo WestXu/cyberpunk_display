@@ -14,19 +14,20 @@ use std::io::Read;
 
 use parse_json::{parse_json, Msg};
 
+#[derive(Debug)]
 pub struct Price {
     pub name: String,
     pub price: NotNan<f64>,
 }
 
 pub struct Market {
-    symbol: String,
-    name: String,
+    pub symbol: String,
+    pub name: String,
 }
 
 pub struct WsCoin {
-    markets: Vec<Market>,
-    socket: Option<
+    pub markets: Vec<Market>,
+    pub socket: Option<
         tungstenite::WebSocket<
             tungstenite::stream::Stream<
                 std::net::TcpStream,

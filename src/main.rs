@@ -1,12 +1,8 @@
-use cyberpunk_display::price_queue::PriceQueue;
-use cyberpunk_display::ws_coin::WsCoin;
+use cyberpunk_display::matrix::BtcEthMatrix;
 
 fn main() {
-    let mut pq = PriceQueue::default();
-
     println!("\n\n\n\n\n\n\n\n");
-    for p in WsCoin::default() {
-        pq.push(p.price);
-        println!("\x1b[8A{}", pq)
+    for screen in BtcEthMatrix::default() {
+        println!("\x1b[8A{}", screen.to_string())
     }
 }
