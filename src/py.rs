@@ -36,7 +36,7 @@ impl PriceQueueRust {
     }
 
     pub fn to_rgb565(&self) -> PyResult<Vec<u16>> {
-        Ok(self.pq.to_screen().serialize())
+        Ok(self.pq.to_screen(true).serialize())
     }
 }
 

@@ -107,10 +107,10 @@ impl PriceQueue {
             .collect()
     }
 
-    pub fn to_screen(&self) -> Screen {
+    pub fn to_screen(&self, show_num: bool) -> Screen {
         let dim = 0.8;
         let dim_max = (255.0 * dim) as u8;
-        Screen {
+        let screen = Screen {
             pixels: self
                 .to_2d_direction_array()
                 .iter()
@@ -125,11 +125,16 @@ impl PriceQueue {
                         .collect()
                 })
                 .collect::<Vec<Vec<Option<Rgb888>>>>(),
-        } + Screen::from_float(self.q[31])
+        };
+        if show_num {
+            screen + Screen::from_float(self.q[31])
+        } else {
+            screen
+        }
     }
 
     pub fn to_plot(&self) -> String {
-        self.to_screen().to_string()
+        self.to_screen(true).to_string()
     }
 }
 
