@@ -56,19 +56,11 @@ impl Screen {
     }
     pub fn from_chars(cs: Character) -> Self {
         let mut screen = Screen::default();
-        screen.draw(&cs.pixels, 32 - (cs.pixels[0].len() + 1), 1);
+        screen.draw(&cs.pixels, 32 - (cs.pixels[0].len() + 1), 0);
         screen
     }
     pub fn from_float(p: NotNan<f64>) -> Self {
-        let cs: Character = format!("{:.2}", p)
-            .chars()
-            .into_iter()
-            .map(|c| Character::new(c, Font::Large))
-            .into_iter()
-            .reduce(|a, b| a + b)
-            .unwrap();
-
-        Screen::from_chars(cs)
+        Screen::from_chars(Character::from_float(p, Font::Large))
     }
     pub fn serialize(&self) -> Vec<u16> {
         self.pixels

@@ -2,6 +2,7 @@ use std::ops;
 
 use super::pixels_to_string::pixels_to_string;
 use super::rgb::Rgb888;
+use ordered_float::NotNan;
 
 // Medium and Small fonts inspied by https://github.com/oidoid/mem
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -361,6 +362,15 @@ impl Character {
                 },
             },
         }
+    }
+    pub fn from_float(p: NotNan<f64>, font: Font) -> Self {
+        format!("{:.2}", p)
+            .chars()
+            .into_iter()
+            .map(|c| Character::new(c, font))
+            .into_iter()
+            .reduce(|a, b| a + b)
+            .unwrap()
     }
 }
 
