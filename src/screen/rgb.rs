@@ -1,6 +1,6 @@
 use ansi_term::Colour;
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq)]
 pub struct Rgb888 {
     r: u8,
     g: u8,
@@ -28,4 +28,27 @@ impl Rgb888 {
 #[test]
 fn test_rgb888_to_rgb565() {
     assert_eq!(Rgb888::new(172, 10, 127).to_rgb565(), 43087);
+}
+
+pub fn colorize(
+    pixels: &Vec<Vec<Option<Rgb888>>>,
+    from: &Rgb888,
+    to: &Rgb888,
+) -> Vec<Vec<Option<Rgb888>>> {
+    pixels
+        .iter()
+        .map(|row| {
+            row.iter()
+                .map(|x| {
+                    if x.is_none() {
+                        None
+                    } else if x.is_some() & (x.unwrap() == *from) {
+                        Some(to.clone())
+                    } else {
+                        Some(from.clone())
+                    }
+                })
+                .collect()
+        })
+        .collect()
 }

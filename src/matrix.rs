@@ -1,5 +1,6 @@
 use super::price_queue::PriceQueue;
 use super::screen::character::{Character, Font};
+use super::screen::rgb::{colorize, Rgb888};
 use super::screen::Screen;
 use super::ws_coin::{Market, Price, WsCoin};
 use ordered_float::NotNan;
@@ -71,11 +72,27 @@ impl Iterator for BtcEthMatrix {
         let mut screen = self.pq.to_screen(false);
         if self.btc_price.is_some() {
             let major_cs = Character::from_float(self.btc_price.unwrap(), Font::Medium);
-            screen.draw(&major_cs.pixels, 32 - (major_cs.pixels[0].len() + 1), 0);
+            screen.draw(
+                &colorize(
+                    &major_cs.pixels,
+                    &Rgb888::new(255, 255, 255),
+                    &Rgb888::new(255, 255, 0),
+                ),
+                32 - (major_cs.pixels[0].len() + 1),
+                0,
+            );
         }
         if self.eth_price.is_some() {
             let minor_cs = Character::from_float(self.eth_price.unwrap(), Font::Small);
-            screen.draw(&minor_cs.pixels, 32 - (minor_cs.pixels[0].len() + 1), 5);
+            screen.draw(
+                &colorize(
+                    &minor_cs.pixels,
+                    &Rgb888::new(255, 255, 255),
+                    &Rgb888::new(170, 170, 170),
+                ),
+                32 - (minor_cs.pixels[0].len() + 1),
+                5,
+            );
         }
         Some(screen)
     }

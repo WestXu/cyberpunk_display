@@ -2,7 +2,7 @@ use std::ops;
 
 pub mod character;
 mod pixels_to_string;
-mod rgb;
+pub mod rgb;
 
 use ordered_float::NotNan;
 
