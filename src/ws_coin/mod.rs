@@ -76,7 +76,7 @@ impl Iterator for WsCoin {
         match self.recv_price() {
             Ok(price) => Some(price),
             Err(error) => {
-                println!("{}", error);
+                println!("{}\n\n\n\n\n\n\n\n", error);
                 match error {
                     RecvError::RecevingError(_) => {
                         self.reconnect();

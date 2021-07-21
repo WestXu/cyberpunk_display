@@ -1,4 +1,4 @@
-use super::price_queue::PriceQueue;
+use super::price_queue::{PlotKind, PriceQueue};
 use super::screen::character::{Character, Font};
 use super::screen::rgb::{colorize, Rgb888};
 use super::screen::Screen;
@@ -24,7 +24,7 @@ impl Iterator for BtcMatrix {
     fn next(&mut self) -> Option<Self::Item> {
         let p = self.ws_coin.next().unwrap().price;
         self.pq.push(p);
-        Some(self.pq.to_screen(true))
+        Some(self.pq.to_screen(PlotKind::TrendLine, true))
     }
 }
 
@@ -69,7 +69,7 @@ impl Iterator for BtcEthMatrix {
             self.eth_price = Some(price.price);
         }
 
-        let mut screen = self.pq.to_screen(false);
+        let mut screen = self.pq.to_screen(PlotKind::FlatLine, false);
         if self.btc_price.is_some() {
             let major_cs = Character::from_float(self.btc_price.unwrap(), Font::Medium);
             screen.draw(

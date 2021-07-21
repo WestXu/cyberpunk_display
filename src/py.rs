@@ -33,14 +33,6 @@ impl PriceQueueRust {
         self.pq.push(NotNan::new(p).unwrap());
         Ok(())
     }
-
-    pub fn to_plot(&self) -> PyResult<String> {
-        Ok(self.pq.to_plot())
-    }
-
-    pub fn to_rgb565(&self) -> PyResult<Vec<u16>> {
-        Ok(self.pq.to_screen(true).serialize())
-    }
 }
 
 #[pyclass]

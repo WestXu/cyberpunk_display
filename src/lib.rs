@@ -46,8 +46,8 @@ fn test_pq_screen_2_rows() {
         p += NotNan::new(rng.gen_range(-10.0..10.0)).unwrap();
         pq.push(p);
 
-        let mut screen =
-            pq.to_screen(false) + Screen::from_chars(Character::from_float(p, Font::Medium));
+        let mut screen = pq.to_screen(price_queue::PlotKind::FlatLine, false)
+            + Screen::from_chars(Character::from_float(p, Font::Medium));
         let minor_cs = Character::from_float(p / 100.0, Font::Small);
         screen.draw(&minor_cs.pixels, 32 - (minor_cs.pixels[0].len() + 1), 5);
         println!("\x1b[8A{}", screen.to_string());

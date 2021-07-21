@@ -13,6 +13,11 @@ pub enum Direction {
     Down,
 }
 
+pub enum PlotKind {
+    TrendLine,
+    FlatLine,
+}
+
 #[derive(Debug)]
 pub struct PriceQueue {
     q: VecDeque<NotNan<f64>>,
@@ -107,24 +112,43 @@ impl PriceQueue {
             .collect()
     }
 
-    pub fn to_screen(&self, show_num: bool) -> Screen {
+    pub fn to_screen(&self, plot_kind: PlotKind, show_num: bool) -> Screen {
         let dim = 0.8;
         let dim_max = (255.0 * dim) as u8;
-        let screen = Screen {
-            pixels: self
-                .to_2d_direction_array()
-                .iter()
-                .map(|row| {
-                    row.iter()
-                        .map(|x| match x {
-                            Some(Direction::Flat) => Some(Rgb888::new(0, 0, dim_max)),
-                            Some(Direction::Up) => Some(Rgb888::new(0, dim_max, 0)),
-                            Some(Direction::Down) => Some(Rgb888::new(dim_max, 0, 0)),
-                            _ => None,
+        let screen = match plot_kind {
+            PlotKind::TrendLine => Screen {
+                pixels: self
+                    .to_2d_direction_array()
+                    .iter()
+                    .map(|row| {
+                        row.iter()
+                            .map(|x| match x {
+                                Some(Direction::Flat) => Some(Rgb888::new(0, 0, dim_max)),
+                                Some(Direction::Up) => Some(Rgb888::new(0, dim_max, 0)),
+                                Some(Direction::Down) => Some(Rgb888::new(dim_max, 0, 0)),
+                                _ => None,
+                            })
+                            .collect()
+                    })
+                    .collect::<Vec<Vec<Option<Rgb888>>>>(),
+            },
+            PlotKind::FlatLine => {
+                let mut screen = Screen::default();
+                screen.draw(
+                    &vec![self
+                        .to_up_down()
+                        .iter()
+                        .map(|d| match d {
+                            Direction::Flat => Some(Rgb888::new(0, 0, dim_max)),
+                            Direction::Up => Some(Rgb888::new(0, dim_max, 0)),
+                            Direction::Down => Some(Rgb888::new(dim_max, 0, 0)),
                         })
-                        .collect()
-                })
-                .collect::<Vec<Vec<Option<Rgb888>>>>(),
+                        .collect()],
+                    0,
+                    4,
+                );
+                screen
+            }
         };
         if show_num {
             screen + Screen::from_float(self.q[31])
@@ -132,14 +156,14 @@ impl PriceQueue {
             screen
         }
     }
-
-    pub fn to_plot(&self) -> String {
-        self.to_screen(true).to_string()
-    }
 }
 
 impl fmt::Display for PriceQueue {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:}", self.to_plot())
+        write!(
+            f,
+            "{:}",
+            self.to_screen(PlotKind::TrendLine, true).to_string()
+        )
     }
 }
