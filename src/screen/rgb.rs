@@ -12,11 +12,11 @@ impl Rgb888 {
         Rgb888 { r, g, b }
     }
 
-    pub fn to_term_rgb(&self) -> Colour {
+    pub fn to_term_rgb(self) -> Colour {
         Colour::RGB(self.r, self.g, self.b)
     }
 
-    pub fn to_rgb565(&self) -> u16 {
+    pub fn to_rgb565(self) -> u16 {
         let r5 = ((self.r >> 3) as u16) << 11;
         let g6 = ((self.g >> 2) as u16) << 5;
         let b5 = (self.b >> 3) as u16;
@@ -31,7 +31,7 @@ fn test_rgb888_to_rgb565() {
 }
 
 pub fn colorize(
-    pixels: &Vec<Vec<Option<Rgb888>>>,
+    pixels: &[Vec<Option<Rgb888>>],
     from: &Rgb888,
     to: &Rgb888,
 ) -> Vec<Vec<Option<Rgb888>>> {
@@ -43,9 +43,9 @@ pub fn colorize(
                     if x.is_none() {
                         None
                     } else if x.is_some() & (x.unwrap() == *from) {
-                        Some(to.clone())
+                        Some(*to)
                     } else {
-                        Some(from.clone())
+                        Some(*from)
                     }
                 })
                 .collect()

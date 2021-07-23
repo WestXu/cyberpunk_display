@@ -135,7 +135,7 @@ impl PriceQueue {
             PlotKind::FlatLine => {
                 let mut screen = Screen::default();
                 screen.draw(
-                    &vec![self
+                    &[self
                         .to_up_down()
                         .iter()
                         .map(|d| match d {

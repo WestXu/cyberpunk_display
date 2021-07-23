@@ -33,7 +33,7 @@ impl Screen {
     fn _is_in_screen(x: usize, y: usize) -> bool {
         (x <= 31) & (y <= 7)
     }
-    pub fn draw(&mut self, pixels: &Vec<Vec<Option<Rgb888>>>, x0: usize, y0: usize) -> &Self {
+    pub fn draw(&mut self, pixels: &[Vec<Option<Rgb888>>], x0: usize, y0: usize) -> &Self {
         let height = pixels.len();
         let width = pixels[0].len();
 
