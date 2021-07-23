@@ -91,24 +91,28 @@ impl Iterator for WsCoin {
 
 impl WsCoin {
     fn connect(&mut self) {
-        let (mut socket, _) =
-            connect(Url::parse("wss://api.hadax.com/ws").unwrap()).expect("Can't connect");
-
-        for market in &self.markets {
-            socket
-                .write_message(Message::Text(format!(
-                    "{{\"sub\": \"market.{}.trade.detail\", \"id\": \"{}\"}}",
-                    market.symbol, market.symbol
-                )))
-                .unwrap();
+        if let Ok((mut socket, _)) = connect(Url::parse("wss://api.hadax.com/ws").unwrap()) {
+            for market in &self.markets {
+                socket
+                    .write_message(Message::Text(format!(
+                        "{{\"sub\": \"market.{}.trade.detail\", \"id\": \"{}\"}}",
+                        market.symbol, market.symbol
+                    )))
+                    .unwrap();
+            }
+            self.socket = Some(socket);
+        } else {
+            println!("Failed connecting.");
+            self.reconnect()
         }
-
-        self.socket = Some(socket);
     }
 
     fn reconnect(&mut self) {
+        println!("Reconnect in 60s...");
         thread::sleep(Duration::from_secs(60));
-        self.connect()
+        println!("Reconnecting...");
+        self.connect();
+        println!("Reconnected. \n\n\n\n\n\n\n\n");
     }
 
     fn recv_price(&mut self) -> Result<Price, RecvError> {
