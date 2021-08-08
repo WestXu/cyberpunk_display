@@ -1,11 +1,13 @@
 pub mod parse_json;
 
+use native_tls::TlsConnector;
 use std::error::Error;
 use std::fmt;
+use std::net::TcpStream;
 use std::thread;
 use std::time::Duration;
 
-use tungstenite::{connect, Message};
+use tungstenite::{client, Message};
 use url::Url;
 
 use ordered_float::NotNan;
@@ -48,14 +50,7 @@ impl fmt::Display for RecvError {
 
 pub struct WsCoin {
     pub markets: Vec<Market>,
-    pub socket: Option<
-        tungstenite::WebSocket<
-            tungstenite::stream::Stream<
-                std::net::TcpStream,
-                native_tls::TlsStream<std::net::TcpStream>,
-            >,
-        >,
-    >,
+    pub socket: Option<tungstenite::WebSocket<native_tls::TlsStream<std::net::TcpStream>>>,
 }
 
 impl Default for WsCoin {
@@ -89,22 +84,31 @@ impl Iterator for WsCoin {
     }
 }
 
+fn connect(
+    markets: &[Market],
+) -> Result<tungstenite::WebSocket<native_tls::TlsStream<std::net::TcpStream>>, Box<dyn Error>> {
+    let stream = TcpStream::connect("api.hadax.com:443")?;
+    stream.set_read_timeout(Some(Duration::from_secs(60)))?;
+    let stream = TlsConnector::new()?.connect("api.hadax.com", stream)?;
+    let (mut socket, _) = client(Url::parse("wss://api.hadax.com/ws")?, stream)?;
+    for market in markets {
+        socket.write_message(Message::Text(format!(
+            "{{\"sub\": \"market.{}.trade.detail\", \"id\": \"{}\"}}",
+            market.symbol, market.symbol
+        )))?;
+    }
+    Ok(socket)
+}
+
 impl WsCoin {
     fn connect(&mut self) {
-        if let Ok((mut socket, _)) = connect(Url::parse("wss://api.hadax.com/ws").unwrap()) {
-            for market in &self.markets {
-                socket
-                    .write_message(Message::Text(format!(
-                        "{{\"sub\": \"market.{}.trade.detail\", \"id\": \"{}\"}}",
-                        market.symbol, market.symbol
-                    )))
-                    .unwrap();
+        match connect(&self.markets) {
+            Ok(socket) => self.socket = Some(socket),
+            Err(error) => {
+                println!("{}", error);
+                self.reconnect();
             }
-            self.socket = Some(socket);
-        } else {
-            println!("Failed connecting.");
-            self.reconnect()
-        }
+        };
     }
 
     fn reconnect(&mut self) {
