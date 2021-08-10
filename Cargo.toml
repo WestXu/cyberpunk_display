@@ -4,14 +4,9 @@ version = "0.1.0"
 authors = ["WestXu <xu-lai-xi@qq.com>"]
 edition = "2018"
 
-[lib]
-name = "cyberpunk_display"
-crate-type = ["lib", "cdylib"]
-
 [dependencies]
 ordered-float = "*"
 ansi_term = "*"
-pyo3 = "*"
 tungstenite = '*'
 url = '*'
 flate2 = "*"
@@ -21,7 +16,3 @@ native-tls = "*"
 
 [dev-dependencies]
 rand = "*"
-
-[features]
-extension-module = ["pyo3/extension-module"]
-# default = ["extension-module"]  # bug: https://github.com/PyO3/pyo3/issues/341
