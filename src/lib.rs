@@ -1,3 +1,4 @@
+pub mod awtrix;
 pub mod matrix;
 pub mod price_queue;
 pub mod screen;

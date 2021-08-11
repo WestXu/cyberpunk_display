@@ -13,6 +13,7 @@ flate2 = "*"
 serde = { version = "*", features = ["derive"] }
 serde_json = "*"
 native-tls = "*"
+reqwest = { version = "*", features = ["blocking"] }
 
 [dev-dependencies]
 rand = "*"
