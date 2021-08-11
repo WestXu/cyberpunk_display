@@ -1,4 +1,5 @@
 use reqwest::blocking::Client;
+use reqwest::header;
 use std::time::SystemTime;
 
 pub struct Awtrix {
@@ -28,6 +29,7 @@ impl Awtrix {
                 self.host, self.port, endpoint
             ))
             .body(serde_json::to_string(&data).unwrap())
+            .header(header::CONTENT_TYPE, "application/json")
             .send()
             .unwrap();
         if !resp.status().is_success() {
