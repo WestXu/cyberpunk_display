@@ -2,7 +2,7 @@ use reqwest::blocking::Client;
 use std::time::SystemTime;
 
 pub struct Awtrix {
-    ip: String,
+    host: String,
     port: u16,
     ssn: Client,
     min_interval: u128, // in milliseconds
@@ -10,9 +10,9 @@ pub struct Awtrix {
 }
 
 impl Awtrix {
-    pub fn new(ip: String, port: u16) -> Awtrix {
+    pub fn new(host: String, port: u16) -> Awtrix {
         Awtrix {
-            ip,
+            host,
             port,
             ssn: Client::new(),
             min_interval: 100,
@@ -25,7 +25,7 @@ impl Awtrix {
             .ssn
             .post(format!(
                 "http://{}:{}/api/v3/{}",
-                self.ip, self.port, endpoint
+                self.host, self.port, endpoint
             ))
             .body(serde_json::to_string(&data).unwrap())
             .send()
