@@ -6,7 +6,6 @@ pub struct Awtrix {
     host: String,
     port: u16,
     ssn: Client,
-    min_interval: u128, // in milliseconds
     last_sent_time: SystemTime,
 }
 
@@ -16,7 +15,6 @@ impl Awtrix {
             host,
             port,
             ssn: Client::new(),
-            min_interval: 100,
             last_sent_time: SystemTime::now(),
         }
     }
@@ -47,10 +45,6 @@ impl Awtrix {
     }
 
     pub fn plot(&mut self, rgb565: &[u16]) {
-        if self.last_sent_time.elapsed().unwrap().as_millis() < self.min_interval {
-            // 小于0.1秒的间隔没有必要发送，人眼无法分辨
-            return;
-        }
         self.push(
             serde_json::json!({
                 "draw": [
