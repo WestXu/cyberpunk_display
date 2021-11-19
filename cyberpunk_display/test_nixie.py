@@ -4,8 +4,8 @@ from decimal import Decimal
 from cyberpunk_display.nixie import Nixie, logger
 
 
-async def main(loop, interval=0.5):
-    with Nixie(5, loop) as nixie:
+async def main(loop, port=3, interval=0.5):
+    with Nixie(port, loop) as nixie:
         await nixie.send(999999)
 
         logger.info('Testing brightness...')
@@ -36,5 +36,8 @@ async def main(loop, interval=0.5):
 
 
 if __name__ == "__main__":
+    import sys
+
+    port = int(sys.argv[1])
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(main(loop))
+    loop.run_until_complete(main(loop, port))
