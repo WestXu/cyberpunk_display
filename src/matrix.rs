@@ -5,18 +5,10 @@ use super::screen::Screen;
 use super::ws_coin::{Market, Price, WsCoin};
 use ordered_float::NotNan;
 
+#[derive(Default)]
 pub struct BtcMatrix {
     pq: PriceQueue,
     ws_coin: WsCoin,
-}
-
-impl Default for BtcMatrix {
-    fn default() -> Self {
-        BtcMatrix {
-            pq: PriceQueue::default(),
-            ws_coin: WsCoin::default(),
-        }
-    }
 }
 
 impl Iterator for BtcMatrix {
