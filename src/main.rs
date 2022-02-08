@@ -1,24 +1,23 @@
-use clap::{AppSettings, Clap};
+use clap::Parser;
 use cyberpunk_display::awtrix;
 use cyberpunk_display::matrix::BtcEthMatrix;
 
-#[derive(Clap)]
-#[clap(setting = AppSettings::ColoredHelp)]
+#[derive(Parser, Debug)]
 struct Opts {
     #[clap(subcommand)]
     subcmd: SubCommand,
 }
 
-#[derive(Clap)]
+#[derive(Parser, Debug)]
 enum SubCommand {
     Matrix(Matrix),
     Awtrix(Awtrix),
 }
 
-#[derive(Clap)]
+#[derive(Parser, Debug)]
 struct Matrix {}
 
-#[derive(Clap)]
+#[derive(Parser, Debug)]
 struct Awtrix {
     #[clap(short, long, default_value = "localhost")]
     host: String,
