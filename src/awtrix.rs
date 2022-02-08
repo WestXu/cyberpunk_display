@@ -62,3 +62,9 @@ impl Awtrix {
         self.last_sent_time = SystemTime::now();
     }
 }
+
+impl Drop for Awtrix {
+    fn drop(&mut self) {
+        self.exit()
+    }
+}
