@@ -43,6 +43,7 @@ impl Default for BtcEthMatrix {
                     },
                 ],
                 socket: None,
+                last_ping_time: None,
             },
             btc_price: None,
             eth_price: None,

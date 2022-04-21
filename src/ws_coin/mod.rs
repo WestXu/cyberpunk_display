@@ -6,6 +6,7 @@ use std::fmt;
 use std::net::TcpStream;
 use std::thread;
 use std::time::Duration;
+use std::time::SystemTime;
 
 use tungstenite::{client, Message};
 use url::Url;
@@ -47,6 +48,7 @@ impl fmt::Display for RecvError {
 pub struct WsCoin {
     pub markets: Vec<Market>,
     pub socket: Option<tungstenite::WebSocket<native_tls::TlsStream<std::net::TcpStream>>>,
+    pub last_ping_time: Option<SystemTime>,
 }
 
 impl Default for WsCoin {
@@ -57,6 +59,7 @@ impl Default for WsCoin {
                 name: "BTC".to_string(),
             }],
             socket: None,
+            last_ping_time: None,
         }
     }
 }
@@ -123,6 +126,23 @@ impl WsCoin {
             }
             Some(socket) => socket,
         };
+
+        match self.last_ping_time {
+            // ping if needed
+            None => {
+                self.last_ping_time = Some(SystemTime::now());
+            }
+            Some(_) => {
+                if self.last_ping_time.unwrap().elapsed().unwrap().as_secs() > 15 {
+                    socket
+                        .write_message(Message::Text("{\"op\": \"ping\"}".to_owned()))
+                        .unwrap();
+                    self.last_ping_time = Some(SystemTime::now());
+                    // println!("Ping");
+                }
+            }
+        }
+
         let msg = match socket.read_message() {
             Ok(msg) => msg,
             Err(error) => {
@@ -160,6 +180,10 @@ impl WsCoin {
                     },
                     price: p,
                 }),
+                Msg::Pong {} => {
+                    // println!("Pong");
+                    self.recv_price()
+                }
             },
             Err(error) => Err(RecvError::ParsingError(format!(
                 "Error {} happened parsing json: {}",

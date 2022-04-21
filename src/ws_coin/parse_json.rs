@@ -7,6 +7,7 @@ use serde::Deserialize;
 pub enum Msg {
     Subscribed(String),
     Price { symbol: String, price: NotNan<f64> },
+    Pong {},
 }
 
 #[derive(Deserialize, PartialEq, Debug)]
@@ -21,6 +22,7 @@ enum Received {
         market: String,
         data: Vec<TickData>,
     },
+    pong {},
 }
 
 #[derive(Deserialize, PartialEq, Debug)]
@@ -40,6 +42,7 @@ pub fn parse_json(data: &str) -> Result<Msg, Box<dyn Error>> {
             symbol: market,
             price: NotNan::new(data[0].price)?,
         },
+        Received::pong {} => Msg::Pong {},
     })
 }
 
@@ -75,7 +78,8 @@ fn test_parse_json() {
                         "time": "2022-04-21T07:26:35.043893+00:00"
                     }
                 ]
-            }
+            },
+            {"type": "pong"}
         ]
         "#,
     )
@@ -91,6 +95,7 @@ fn test_parse_json() {
                 market: "BTC/USD".to_string(),
                 data: vec!(TickData { price: 41624.0 }, TickData { price: 41624.0 }),
             },
+            Received::pong {}
         ]
     );
 }
