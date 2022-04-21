@@ -32,7 +32,7 @@ pub struct Market {
 #[derive(Debug)]
 pub enum RecvError {
     RecevingError(String),
-    DecopmressionError(String),
+    DecodingError(String),
     ParsingError(String),
 }
 
@@ -42,7 +42,7 @@ impl fmt::Display for RecvError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             RecvError::RecevingError(err_str) => write!(f, "{}", err_str),
-            RecvError::DecopmressionError(err_str) => write!(f, "{}", err_str),
+            RecvError::DecodingError(err_str) => write!(f, "{}", err_str),
             RecvError::ParsingError(err_str) => write!(f, "{}", err_str),
         }
     }
@@ -77,7 +77,7 @@ impl Iterator for WsCoin {
                         self.reconnect();
                         self.next()
                     }
-                    RecvError::DecopmressionError(_) | RecvError::ParsingError(_) => self.next(),
+                    RecvError::DecodingError(_) | RecvError::ParsingError(_) => self.next(),
                 }
             }
         }
@@ -141,8 +141,8 @@ impl WsCoin {
         let mut s = String::new();
 
         if let Err(error) = gz.read_to_string(&mut s) {
-            return Err(RecvError::DecopmressionError(format!(
-                "Error {} happened decompressing",
+            return Err(RecvError::DecodingError(format!(
+                "Error {} happened decoding",
                 error
             )));
         };
