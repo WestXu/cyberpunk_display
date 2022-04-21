@@ -11,10 +11,6 @@ use tungstenite::{client, Message};
 use url::Url;
 
 use ordered_float::NotNan;
-use serde_json::json;
-
-use flate2::read::GzDecoder;
-use std::io::Read;
 
 use parse_json::{parse_json, Msg};
 
@@ -57,7 +53,7 @@ impl Default for WsCoin {
     fn default() -> Self {
         WsCoin {
             markets: vec![Market {
-                symbol: "btcusdt".to_string(),
+                symbol: "BTC/USD".to_string(),
                 name: "BTC".to_string(),
             }],
             socket: None,
@@ -87,14 +83,14 @@ impl Iterator for WsCoin {
 fn connect(
     markets: &[Market],
 ) -> Result<tungstenite::WebSocket<native_tls::TlsStream<std::net::TcpStream>>, Box<dyn Error>> {
-    let stream = TcpStream::connect("api.hadax.com:443")?;
+    let stream = TcpStream::connect("ftx.cool:443")?;
     stream.set_read_timeout(Some(Duration::from_secs(60)))?;
-    let stream = TlsConnector::new()?.connect("api.hadax.com", stream)?;
-    let (mut socket, _) = client(Url::parse("wss://api.hadax.com/ws")?, stream)?;
+    let stream = TlsConnector::new()?.connect("ftx.cool", stream)?;
+    let (mut socket, _) = client(Url::parse("wss://ftx.cool/ws")?, stream)?;
     for market in markets {
         socket.write_message(Message::Text(format!(
-            "{{\"sub\": \"market.{}.trade.detail\", \"id\": \"{}\"}}",
-            market.symbol, market.symbol
+            "{{\"channel\": \"trades\", \"market\": \"{}\", \"op\": \"subscribe\"}}",
+            market.symbol,
         )))?;
     }
     Ok(socket)
@@ -137,22 +133,19 @@ impl WsCoin {
             }
         };
         let msg_binary = msg.into_data();
-        let mut gz = GzDecoder::new(&msg_binary[..]);
-        let mut s = String::new();
 
-        if let Err(error) = gz.read_to_string(&mut s) {
-            return Err(RecvError::DecodingError(format!(
-                "Error {} happened decoding",
-                error
-            )));
+        let s = match String::from_utf8(msg_binary) {
+            Err(error) => {
+                return Err(RecvError::DecodingError(format!(
+                    "Error {} happened decoding",
+                    error
+                )))
+            }
+            Ok(s) => s,
         };
 
         match parse_json(&s) {
             Ok(msg) => match msg {
-                Msg::Ping(ping) => {
-                    self.pong(ping);
-                    self.recv_price()
-                }
                 Msg::Subscribed(_) => self.recv_price(),
                 Msg::Price { symbol, price: p } => Ok(Price {
                     name: {
@@ -172,20 +165,6 @@ impl WsCoin {
                 "Error {} happened parsing json: {}",
                 error, &s
             ))),
-        }
-    }
-
-    fn pong(&mut self, ping: u64) {
-        if let Err(error) = self
-            .socket
-            .as_mut()
-            .unwrap()
-            .write_message(tungstenite::Message::Text(
-                json!({ "pong": ping }).to_string(),
-            ))
-        {
-            println!("Error {} happened ponging", error);
-            self.reconnect()
         }
     }
 }

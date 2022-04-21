@@ -5,57 +5,40 @@ use serde::Deserialize;
 
 #[derive(Debug)]
 pub enum Msg {
-    Ping(u64),
     Subscribed(String),
     Price { symbol: String, price: NotNan<f64> },
 }
 
 #[derive(Deserialize, PartialEq, Debug)]
-#[serde(untagged)]
+#[serde(tag = "type")]
 enum Received {
-    Ping {
-        ping: u64,
+    subscribed {
+        // channel: String,
+        market: String,
     },
-    Subscribed {
-        // id: String,
-        status: String,
-        subbed: String,
-        // ts: u64,
+    update {
+        // channel: String,
+        market: String,
+        data: Vec<TickData>,
     },
-    Price {
-        ch: String,
-        // ts: u64,
-        tick: Tick,
-    },
-}
-
-#[derive(Deserialize, PartialEq, Debug)]
-struct Tick {
-    // id: u64,
-    // ts: u64,
-    data: Vec<TickData>,
 }
 
 #[derive(Deserialize, PartialEq, Debug)]
 struct TickData {
     // id: u128, an open issue https://github.com/serde-rs/serde/issues/1682
-    // ts: u64,
-    // tradeId: u64,
-    // amount: f64,
+    // time: String,
+    // liquidation: bool,
+    // side: String,
+    // size: f64,
     price: f64,
-    // direction: String,
 }
 
 pub fn parse_json(data: &str) -> Result<Msg, Box<dyn Error>> {
     Ok(match serde_json::from_str::<Received>(data)? {
-        Received::Ping { ping } => Msg::Ping(ping),
-        Received::Subscribed { status, subbed } => {
-            assert_eq!(status, "ok", "Failed subscribe {}", subbed);
-            Msg::Subscribed(subbed)
-        }
-        Received::Price { ch, tick } => Msg::Price {
-            symbol: ch.replace("market.", "").replace(".trade.detail", ""),
-            price: NotNan::new(tick.data[0].price)?,
+        Received::subscribed { market } => Msg::Subscribed(market),
+        Received::update { market, data } => Msg::Price {
+            symbol: market,
+            price: NotNan::new(data[0].price)?,
         },
     })
 }
@@ -66,31 +49,32 @@ fn test_parse_json() {
         r#"
         [
             {
-                "id": "btcusdt",
-                "status": "ok",
-                "subbed": "market.btcusdt.trade.detail",
-                "ts": 1624332964918
+                "type": "subscribed",
+                "channel": "trades",
+                "market": "BTC/USD"
             },
             {
-                "ch": "market.btcusdt.trade.detail",
-                "ts": 1624332964575,
-                "tick": {
-                    "id": 131421049089,
-                    "ts": 1624332964573,
-                    "data": [
-                        {
-                            "id": 131421049089304937968219549,
-                            "ts": 1624332964573,
-                            "tradeId": 102482210043,
-                            "amount": 0.006077,
-                            "price": 32942.44,
-                            "direction": "sell"
-                        }
-                    ]
-                }
-            },
-            {
-                "ping": 1624332968042
+                "channel": "trades",
+                "market": "BTC/USD",
+                "type": "update",
+                "data": [
+                    {
+                        "id": 3789370083,
+                        "price": 41624.0,
+                        "size": 0.0001,
+                        "side": "sell",
+                        "liquidation": false,
+                        "time": "2022-04-21T07:26:35.043893+00:00"
+                    },
+                    {
+                        "id": 3789370084,
+                        "price": 41624.0,
+                        "size": 0.0007,
+                        "side": "sell",
+                        "liquidation": false,
+                        "time": "2022-04-21T07:26:35.043893+00:00"
+                    }
+                ]
             }
         ]
         "#,
@@ -100,18 +84,12 @@ fn test_parse_json() {
     assert_eq!(
         msgs,
         [
-            Received::Subscribed {
-                status: "ok".to_string(),
-                subbed: "market.btcusdt.trade.detail".to_string(),
+            Received::subscribed {
+                market: "BTC/USD".to_string(),
             },
-            Received::Price {
-                ch: "market.btcusdt.trade.detail".to_string(),
-                tick: Tick {
-                    data: vec!(TickData { price: 32942.44 },),
-                },
-            },
-            Received::Ping {
-                ping: 1624332968042,
+            Received::update {
+                market: "BTC/USD".to_string(),
+                data: vec!(TickData { price: 41624.0 }, TickData { price: 41624.0 }),
             },
         ]
     );

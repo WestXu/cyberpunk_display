@@ -9,7 +9,6 @@ ordered-float = "*"
 ansi_term = "*"
 tungstenite = '*'
 url = '*'
-flate2 = "*"
 serde = { version = "*", features = ["derive"] }
 serde_json = "*"
 native-tls = "*"
