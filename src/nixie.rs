@@ -12,12 +12,12 @@ fn float_to_bytes(num: f32) -> [u8; 16] {
         .expect(&format!("Failed to format num {num} to {out_str}"))
 }
 
-struct Nixie {
+pub struct Nixie {
     ser: Box<dyn SerialPort>,
 }
 
 impl Nixie {
-    fn new(serialport: String) -> Self {
+    pub fn new(serialport: String) -> Self {
         Nixie {
             ser: serialport::new(serialport, 9600)
                 .timeout(Duration::from_millis(10))
@@ -25,20 +25,20 @@ impl Nixie {
                 .expect("Failed to open port"),
         }
     }
-    fn send(&mut self, p: f32) {
+    pub fn send(&mut self, p: f32) {
         self.ser
             .write(&float_to_bytes(p))
             .expect(&format!("failed to send {p}"));
         println!("Sent to Nixie {p}");
     }
-    fn set_brightness(&mut self, b: u8) {
+    pub fn set_brightness(&mut self, b: u8) {
         assert!(b <= 8, "brightness should be between (0, 8)");
         self.ser
             .write(format!("TIMB{b}").as_bytes())
             .expect(&format!("failed to set brightness to {b}"));
         println!("Set Nixie brightness to {b}");
     }
-    fn close(&mut self) {
+    pub fn close(&mut self) {
         self.ser
             .write("TIMDBBBBBBBBBBBB".as_bytes())
             .expect("Failed to close");
