@@ -1,5 +1,6 @@
 pub mod awtrix;
 pub mod matrix;
+pub mod nixie;
 pub mod price_queue;
 pub mod screen;
 pub mod ws_coin;
