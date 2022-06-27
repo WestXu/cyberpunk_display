@@ -14,7 +14,10 @@ serde_json = "*"
 native-tls = "*"
 reqwest = { version = "*", features = ["blocking"] }
 clap = { version = "3.0.14", features = ["derive"] }
-serialport = "4.2"
+serialport = { version = "4.2", optional = true }
 
 [dev-dependencies]
 rand = "*"
+
+[features]
+nixie = ["dep:serialport"]

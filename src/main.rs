@@ -1,7 +1,9 @@
 use clap::Parser;
 use cyberpunk_display::awtrix;
 use cyberpunk_display::matrix::BtcEthMatrix;
+#[cfg(feature = "nixie")]
 use cyberpunk_display::nixie;
+#[cfg(feature = "nixie")]
 use cyberpunk_display::ws_coin::WsCoin;
 
 #[derive(Parser, Debug)]
@@ -14,6 +16,7 @@ struct Opts {
 enum SubCommand {
     Matrix(Matrix),
     Awtrix(Awtrix),
+    #[cfg(feature = "nixie")]
     Nixie(Nixie),
 }
 
@@ -31,6 +34,7 @@ struct Awtrix {
     print: bool,
 }
 
+#[cfg(feature = "nixie")]
 #[derive(Parser, Debug)]
 struct Nixie {
     #[clap(long)]
@@ -57,6 +61,7 @@ fn main() {
                 awtrix.plot(&screen.serialize())
             }
         }
+        #[cfg(feature = "nixie")]
         SubCommand::Nixie(n) => {
             let mut nixie = nixie::Nixie::new(n.serial_port);
             nixie.set_brightness(8);

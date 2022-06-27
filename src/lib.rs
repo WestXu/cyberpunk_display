@@ -1,5 +1,6 @@
 pub mod awtrix;
 pub mod matrix;
+#[cfg(feature = "nixie")]
 pub mod nixie;
 pub mod price_queue;
 pub mod screen;
