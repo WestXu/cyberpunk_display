@@ -6,7 +6,6 @@ use std::fmt;
 use std::net::TcpStream;
 use std::thread;
 use std::time::Duration;
-use std::time::SystemTime;
 
 use tungstenite::{client, Message};
 use url::Url;
@@ -29,7 +28,7 @@ pub struct Market {
 #[derive(Debug)]
 pub enum RecvError {
     RecevingError(String),
-    DecodingError(String),
+    UnexpectedMsgError(String),
     ParsingError(String),
 }
 
@@ -39,7 +38,7 @@ impl fmt::Display for RecvError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             RecvError::RecevingError(err_str) => write!(f, "{}", err_str),
-            RecvError::DecodingError(err_str) => write!(f, "{}", err_str),
+            RecvError::UnexpectedMsgError(err_str) => write!(f, "{}", err_str),
             RecvError::ParsingError(err_str) => write!(f, "{}", err_str),
         }
     }
@@ -48,18 +47,16 @@ impl fmt::Display for RecvError {
 pub struct WsCoin {
     pub markets: Vec<Market>,
     pub socket: Option<tungstenite::WebSocket<native_tls::TlsStream<std::net::TcpStream>>>,
-    pub last_ping_time: Option<SystemTime>,
 }
 
 impl Default for WsCoin {
     fn default() -> Self {
         WsCoin {
             markets: vec![Market {
-                symbol: "BTC/USD".to_string(),
+                symbol: "BTCUSDT".to_string(),
                 name: "BTC".to_string(),
             }],
             socket: None,
-            last_ping_time: None,
         }
     }
 }
@@ -76,7 +73,7 @@ impl Iterator for WsCoin {
                         self.reconnect();
                         self.next()
                     }
-                    RecvError::DecodingError(_) | RecvError::ParsingError(_) => self.next(),
+                    RecvError::UnexpectedMsgError(_) | RecvError::ParsingError(_) => self.next(),
                 }
             }
         }
@@ -86,16 +83,19 @@ impl Iterator for WsCoin {
 fn connect(
     markets: &[Market],
 ) -> Result<tungstenite::WebSocket<native_tls::TlsStream<std::net::TcpStream>>, Box<dyn Error>> {
-    let stream = TcpStream::connect("ftx.cool:443")?;
+    let stream = TcpStream::connect("data-stream.binance.com:443")?;
     stream.set_read_timeout(Some(Duration::from_secs(60)))?;
-    let stream = TlsConnector::new()?.connect("ftx.cool", stream)?;
-    let (mut socket, _) = client(Url::parse("wss://ftx.cool/ws")?, stream)?;
-    for market in markets {
-        socket.write_message(Message::Text(format!(
-            "{{\"channel\": \"trades\", \"market\": \"{}\", \"op\": \"subscribe\"}}",
-            market.symbol,
-        )))?;
-    }
+    let stream = TlsConnector::new()?.connect("data-stream.binance.com", stream)?;
+    let (mut socket, _) = client(Url::parse("wss://data-stream.binance.com/ws/test")?, stream)?;
+
+    let msg = serde_json::json!({
+        "method": "SUBSCRIBE",
+        "params": markets.iter().map(|m| format!("{}@aggTrade", m.symbol.to_lowercase())).collect::<Vec<String>>(),
+        "id": 1
+    })
+    .to_string();
+    socket.write_message(Message::Text(msg))?;
+
     Ok(socket)
 }
 
@@ -127,68 +127,40 @@ impl WsCoin {
             Some(socket) => socket,
         };
 
-        match self.last_ping_time {
-            // ping if needed
-            None => {
-                self.last_ping_time = Some(SystemTime::now());
-            }
-            Some(_) => {
-                if self.last_ping_time.unwrap().elapsed().unwrap().as_secs() > 15 {
-                    socket
-                        .write_message(Message::Text("{\"op\": \"ping\"}".to_owned()))
-                        .unwrap();
-                    self.last_ping_time = Some(SystemTime::now());
-                    // println!("Ping");
-                }
-            }
-        }
-
-        let msg = match socket.read_message() {
-            Ok(msg) => msg,
-            Err(error) => {
-                return Err(RecvError::RecevingError(format!(
-                    "Error {} happened receiving",
-                    error
-                )));
-            }
-        };
-        let msg_binary = msg.into_data();
-
-        let s = match String::from_utf8(msg_binary) {
-            Err(error) => {
-                return Err(RecvError::DecodingError(format!(
-                    "Error {} happened decoding",
-                    error
-                )))
-            }
-            Ok(s) => s,
-        };
-
-        match parse_json(&s) {
-            Ok(msg) => match msg {
-                Msg::Subscribed(_) => self.recv_price(),
-                Msg::Price { symbol, price: p } => Ok(Price {
-                    name: {
-                        let mut name = None;
-                        for market in &self.markets {
-                            if market.symbol == symbol {
-                                name = Some(market.name.clone());
-                                break;
+        match socket.read_message() {
+            Ok(Message::Text(msg)) => match parse_json(&msg) {
+                Ok(msg) => match msg {
+                    Msg::Subscribed => self.recv_price(),
+                    Msg::Price { symbol, price: p } => Ok(Price {
+                        name: {
+                            let mut name = None;
+                            for market in &self.markets {
+                                if market.symbol == symbol {
+                                    name = Some(market.name.clone());
+                                    break;
+                                }
                             }
-                        }
-                        name.unwrap()
-                    },
-                    price: p,
-                }),
-                Msg::Pong {} => {
-                    // println!("Pong");
-                    self.recv_price()
-                }
+                            name.expect(&format!("market name not found for symbol {}", symbol))
+                        },
+                        price: p,
+                    }),
+                },
+                Err(error) => panic!("Error {} happened parsing json: {}", error, &msg),
             },
-            Err(error) => Err(RecvError::ParsingError(format!(
-                "Error {} happened parsing json: {}",
-                error, &s
-            ))),
+            Ok(Message::Ping(_)) => {
+                self.socket
+                    .as_mut()
+                    .unwrap()
+                    .write_message(Message::Pong(vec![]))
+                    .expect("failed sending pong");
+                self.recv_price()
+            }
+            Ok(_) => Err(RecvError::UnexpectedMsgError(
+                "Unexpected message received".to_string(),
+            )),
+            Err(error) => {
+                panic!("Error {} happened receiving", error);
+            }
         }
     }
 }

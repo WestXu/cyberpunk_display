@@ -34,16 +34,15 @@ impl Default for BtcEthMatrix {
             ws_coin: WsCoin {
                 markets: vec![
                     Market {
-                        symbol: "BTC/USD".to_string(),
+                        symbol: "BTCUSDT".to_string(),
                         name: "BTC".to_string(),
                     },
                     Market {
-                        symbol: "ETH/USD".to_string(),
+                        symbol: "ETHUSDT".to_string(),
                         name: "ETH".to_string(),
                     },
                 ],
                 socket: None,
-                last_ping_time: None,
             },
             btc_price: None,
             eth_price: None,
