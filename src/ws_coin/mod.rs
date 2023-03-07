@@ -158,9 +158,7 @@ impl WsCoin {
             Ok(_) => Err(RecvError::UnexpectedMsgError(
                 "Unexpected message received".to_string(),
             )),
-            Err(error) => {
-                panic!("Error {} happened receiving", error);
-            }
+            Err(error) => Err(RecvError::RecevingError(error.to_string())),
         }
     }
 }
