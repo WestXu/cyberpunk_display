@@ -22,7 +22,7 @@ impl Awtrix {
     }
 
     fn push(&self, data: serde_json::Value, endpoint: &str) {
-        let resp = self
+        let _ = self
             .ssn
             .post(format!(
                 "http://{}:{}/api/v3/{}",
@@ -30,11 +30,7 @@ impl Awtrix {
             ))
             .body(serde_json::to_string(&data).unwrap())
             .header(header::CONTENT_TYPE, "application/json")
-            .send()
-            .unwrap();
-        if !resp.status().is_success() {
-            println!("Error posting to awtrix server: {:?}", resp.text());
-        }
+            .send();
     }
 
     fn exit(&self) {
