@@ -157,9 +157,9 @@ impl WsCoin {
                     .expect("failed sending pong");
                 self.recv_price()
             }
-            Ok(_) => Err(RecvError::UnexpectedMsgError(
-                "Unexpected message received".to_string(),
-            )),
+            Ok(msg) => Err(RecvError::UnexpectedMsgError(format!(
+                "Unexpected message received: {msg}"
+            ))),
             Err(error) => Err(RecvError::RecevingError(error.to_string())),
         }
     }
