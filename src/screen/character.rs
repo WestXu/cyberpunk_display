@@ -135,6 +135,10 @@ impl Character {
                     font,
                     pixels: vec![vec![x], vec![x], vec![x], vec![x], vec![o]],
                 },
+                ':' => Character {
+                    font,
+                    pixels: vec![vec![x], vec![o], vec![x], vec![o], vec![x]],
+                },
                 _ => Character {
                     font,
                     pixels: vec![
@@ -249,6 +253,10 @@ impl Character {
                     font,
                     pixels: vec![vec![x], vec![x], vec![x], vec![o]],
                 },
+                ':' => Character {
+                    font,
+                    pixels: vec![vec![x], vec![o], vec![x], vec![o]],
+                },
                 _ => Character {
                     font,
                     pixels: vec![
@@ -352,6 +360,10 @@ impl Character {
                     font,
                     pixels: vec![vec![x], vec![x], vec![o]],
                 },
+                ':' => Character {
+                    font,
+                    pixels: vec![vec![o], vec![x], vec![o]],
+                },
                 _ => Character {
                     font,
                     pixels: vec![
@@ -365,6 +377,17 @@ impl Character {
     }
     pub fn from_float(p: NotNan<f64>, font: Font) -> Self {
         format!("{:.2}", p)
+            .chars()
+            .map(|c| Character::new(c, font))
+            .reduce(|a, b| a + b)
+            .unwrap()
+    }
+    pub fn from_time(font: Font) -> Self {
+        use chrono::Local;
+        let dt = Local::now();
+
+        dt.format("%H:%M:%S")
+            .to_string()
             .chars()
             .map(|c| Character::new(c, font))
             .reduce(|a, b| a + b)

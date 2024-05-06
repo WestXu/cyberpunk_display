@@ -89,3 +89,61 @@ impl Iterator for BtcEthMatrix {
         Some(screen)
     }
 }
+
+pub struct BtcTimeMatrix {
+    pq: PriceQueue,
+    ws_coin: WsCoin,
+    price: Option<NotNan<f64>>,
+}
+
+impl Default for BtcTimeMatrix {
+    fn default() -> Self {
+        BtcTimeMatrix {
+            pq: PriceQueue::default(),
+            ws_coin: WsCoin {
+                markets: vec![Market {
+                    symbol: "BTCUSDT".to_string(),
+                    name: "BTC".to_string(),
+                }],
+                socket: None,
+            },
+            price: None,
+        }
+    }
+}
+
+impl Iterator for BtcTimeMatrix {
+    type Item = Screen;
+    fn next(&mut self) -> Option<Self::Item> {
+        let price: Price = self.ws_coin.next().unwrap();
+        self.price = Some(price.price);
+        self.pq.push(price.price);
+
+        let mut screen = self.pq.to_screen(PlotKind::FlatLine, false);
+        if self.price.is_some() {
+            let major_cs = Character::from_float(self.price.unwrap(), Font::Medium);
+            screen.draw(
+                &colorize(
+                    &major_cs.pixels,
+                    &Rgb888::new(255, 255, 255),
+                    &Rgb888::new(255, 255, 0),
+                ),
+                32 - (major_cs.pixels[0].len() + 1),
+                0,
+            );
+        }
+
+        let minor_cs = Character::from_time(Font::Small);
+        screen.draw(
+            &colorize(
+                &minor_cs.pixels,
+                &Rgb888::new(255, 255, 255),
+                &Rgb888::new(170, 170, 170),
+            ),
+            32 - (minor_cs.pixels[0].len() + 1),
+            5,
+        );
+
+        Some(screen)
+    }
+}
