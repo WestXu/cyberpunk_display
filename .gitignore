@@ -8,5 +8,4 @@ __pycache__/
 tmp/
 nohup.out
 /target
-Cargo.lock
 *.so
