@@ -4,6 +4,7 @@ COPY Cargo.toml /app
 WORKDIR /app
 RUN cargo build --release
 
-FROM gcr.io/distroless/base-debian10
+FROM debian:bullseye-slim
+RUN apt-get update && apt install -y openssl
 COPY --from=build-env /app/target/release/cyberpunk_display /
 ENTRYPOINT ["./cyberpunk_display"]
