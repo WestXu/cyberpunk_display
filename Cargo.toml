@@ -5,19 +5,19 @@ authors = ["WestXu <xu-lai-xi@qq.com>"]
 edition = "2021"
 
 [dependencies]
-ordered-float = "*"
-ansi_term = "*"
-tungstenite = '*'
-url = '*'
-serde = { version = "*", features = ["derive"] }
-serde_json = "*"
-native-tls = "*"
-reqwest = { version = "*", features = ["blocking"] }
-clap = { version = "3.0.14", features = ["derive"] }
+ordered-float = "4.2.0"
+ansi_term = "0.12.1"
+tungstenite = '0.21.0'
+url = '2.5.0'
+serde = { version = "1.0.200", features = ["derive"] }
+serde_json = "1.0.116"
+native-tls = "0.2.11"
+reqwest = { version = "0.12.4", features = ["blocking"] }
+clap = { version = "4.5.4", features = ["derive"] }
 serialport = { version = "4.2", optional = true }
 
 [dev-dependencies]
-rand = "*"
+rand = "0.8.5"
 
 [features]
 nixie = ["dep:serialport"]

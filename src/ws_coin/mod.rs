@@ -94,7 +94,7 @@ fn connect(
         "id": 1
     })
     .to_string();
-    socket.write_message(Message::Text(msg))?;
+    socket.send(Message::Text(msg))?;
 
     Ok(socket)
 }
@@ -127,7 +127,7 @@ impl WsCoin {
             Some(socket) => socket,
         };
 
-        match socket.read_message() {
+        match socket.read() {
             Ok(Message::Text(msg)) => match parse_json(&msg) {
                 Ok(msg) => match msg {
                     Msg::Subscribed => self.recv_price(),
@@ -140,7 +140,9 @@ impl WsCoin {
                                     break;
                                 }
                             }
-                            name.expect(&format!("market name not found for symbol {}", symbol))
+                            name.unwrap_or_else(|| {
+                                panic!("market name not found for symbol {}", symbol)
+                            })
                         },
                         price: p,
                     }),
@@ -151,7 +153,7 @@ impl WsCoin {
                 self.socket
                     .as_mut()
                     .unwrap()
-                    .write_message(Message::Pong(vec![]))
+                    .send(Message::Pong(vec![]))
                     .expect("failed sending pong");
                 self.recv_price()
             }

@@ -45,6 +45,7 @@ impl Screen {
         );
 
         for x in 0..width {
+            #[allow(clippy::needless_range_loop)]
             for y in 0..height {
                 if Self::_is_in_screen(x + x0, y + y0) {
                     self.pixels[y + y0][x + x0] = pixels[y][x];
@@ -85,13 +86,11 @@ fn cover_v1_with_v2<T: Clone>(
     assert_eq!(v1[0].len(), v2[0].len());
 
     v1.into_iter()
-        .zip(v2.into_iter())
-        .into_iter()
+        .zip(v2)
         .map(|(row_of_v1, row_of_v2): (Vec<Option<T>>, Vec<Option<T>>)| {
             row_of_v1
                 .iter()
                 .zip(&row_of_v2)
-                .into_iter()
                 .map(|(a, b)| match (a, b) {
                     (_, None) => a.clone(),
                     _ => b.clone(),

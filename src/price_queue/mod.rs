@@ -102,7 +102,6 @@ impl PriceQueue {
             .map(|row| {
                 row.iter()
                     .zip(&up_down)
-                    .into_iter()
                     .map(|(i, d)| match (i, d) {
                         (false, _) => None,
                         (true, d) => Some(*d),

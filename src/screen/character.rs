@@ -366,9 +366,7 @@ impl Character {
     pub fn from_float(p: NotNan<f64>, font: Font) -> Self {
         format!("{:.2}", p)
             .chars()
-            .into_iter()
             .map(|c| Character::new(c, font))
-            .into_iter()
             .reduce(|a, b| a + b)
             .unwrap()
     }
@@ -384,10 +382,9 @@ fn concat_horizontal_of_2_vecs<T: Clone>(v1: Vec<Vec<T>>, v2: Vec<Vec<T>>) -> Ve
     assert_eq!(v1.len(), v2.len());
 
     v1.into_iter()
-        .zip(v2.into_iter())
-        .into_iter()
+        .zip(v2)
         .map(|(row_of_v1, row_of_v2): (Vec<T>, Vec<T>)| {
-            row_of_v1.into_iter().chain(row_of_v2.into_iter()).collect()
+            row_of_v1.into_iter().chain(row_of_v2).collect()
         })
         .collect()
 }
