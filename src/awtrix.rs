@@ -33,7 +33,7 @@ impl Awtrix {
             .send();
     }
 
-    fn exit(&self) {
+    pub fn exit(&self) {
         self.push(
             serde_json::json!({
                 "draw": [{"type": "exit"}],

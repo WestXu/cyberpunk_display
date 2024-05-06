@@ -32,6 +32,8 @@ struct Awtrix {
     /// Print matrix to terminal before sending to awtrix
     #[clap(long)]
     print: bool,
+    #[clap(long)]
+    interval: Option<f64>, // in seconds, for screen to flip between matrix and builtin clock
 }
 
 #[cfg(feature = "nixie")]
@@ -54,11 +56,28 @@ fn main() {
         SubCommand::Awtrix(a) => {
             let mut awtrix = awtrix::Awtrix::new(a.host, a.port);
             println!("\n\n\n\n\n\n\n\n");
+
+            let start = std::time::Instant::now();
+            let mut pause = false;
+
             for screen in BtcEthMatrix::default() {
                 if a.print {
                     println!("\x1b[8A{}", screen.to_string());
                 }
-                awtrix.plot(&screen.serialize())
+                match a.interval {
+                    None => awtrix.plot(&screen.serialize()),
+                    Some(interval) => {
+                        let new_pause =
+                            ((start.elapsed().as_secs_f64() / interval).round() as u64) % 2 == 0;
+                        if !pause && new_pause {
+                            awtrix.exit();
+                        }
+                        pause = new_pause;
+                        if !pause {
+                            awtrix.plot(&screen.serialize());
+                        }
+                    }
+                }
             }
         }
         #[cfg(feature = "nixie")]
