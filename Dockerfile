@@ -4,6 +4,6 @@ COPY Cargo.toml /app
 WORKDIR /app
 RUN cargo build --release
 
-FROM kubeimages/distroless-cc
+FROM gcr.io/distroless/base-debian10
 COPY --from=build-env /app/target/release/cyberpunk_display /
 ENTRYPOINT ["./cyberpunk_display"]
