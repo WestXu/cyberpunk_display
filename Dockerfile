@@ -4,6 +4,7 @@ COPY Cargo.toml /app
 WORKDIR /app
 RUN cargo build --release
 
-FROM kubeimages/distroless-cc
+FROM debian:bookworm-slim
+RUN apt-get update && apt install -y openssl
 COPY --from=build-env /app/target/release/cyberpunk_display /
 ENTRYPOINT ["./cyberpunk_display"]
