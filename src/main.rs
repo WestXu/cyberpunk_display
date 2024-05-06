@@ -1,6 +1,6 @@
 use clap::Parser;
 use cyberpunk_display::awtrix;
-use cyberpunk_display::matrix::BtcEthMatrix;
+use cyberpunk_display::matrix::{BtcEthMatrix, BtcTimeMatrix};
 #[cfg(feature = "nixie")]
 use cyberpunk_display::nixie;
 #[cfg(feature = "nixie")]
@@ -21,7 +21,10 @@ enum SubCommand {
 }
 
 #[derive(Parser, Debug)]
-struct Matrix {}
+struct Matrix {
+    #[clap(long)]
+    time: bool, // show time instead of eth price
+}
 
 #[derive(Parser, Debug)]
 struct Awtrix {
@@ -32,6 +35,8 @@ struct Awtrix {
     /// Print matrix to terminal before sending to awtrix
     #[clap(long)]
     print: bool,
+    #[clap(long)]
+    time: bool, // show time instead of eth price
 }
 
 #[cfg(feature = "nixie")]
@@ -45,20 +50,32 @@ fn main() {
     let opts: Opts = Opts::parse();
 
     match opts.subcmd {
-        SubCommand::Matrix(_) => {
+        SubCommand::Matrix(a) => {
             println!("\n\n\n\n\n\n\n\n");
-            for screen in BtcEthMatrix::default() {
-                println!("\x1b[8A{}", screen.to_string());
+            if a.time {
+                BtcTimeMatrix::default().for_each(|screen| println!("{}", screen.to_string()));
+            } else {
+                BtcEthMatrix::default().for_each(|screen| println!("{}", screen.to_string()));
             }
         }
         SubCommand::Awtrix(a) => {
             let mut awtrix = awtrix::Awtrix::new(a.host, a.port);
             println!("\n\n\n\n\n\n\n\n");
-            for screen in BtcEthMatrix::default() {
-                if a.print {
-                    println!("\x1b[8A{}", screen.to_string());
-                }
-                awtrix.plot(&screen.serialize())
+
+            if a.time {
+                BtcTimeMatrix::default().for_each(|screen| {
+                    if a.print {
+                        println!("\x1b[8A{}", screen.to_string());
+                    }
+                    awtrix.plot(&screen.serialize())
+                });
+            } else {
+                BtcEthMatrix::default().for_each(|screen| {
+                    if a.print {
+                        println!("\x1b[8A{}", screen.to_string());
+                    }
+                    awtrix.plot(&screen.serialize())
+                });
             }
         }
         #[cfg(feature = "nixie")]
