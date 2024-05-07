@@ -5,7 +5,6 @@ use cyberpunk_display::matrix::{BtcEthMatrix, BtcTimeMatrix};
 use cyberpunk_display::nixie;
 #[cfg(feature = "nixie")]
 use cyberpunk_display::ws_coin::WsCoin;
-use futures::StreamExt as _;
 
 #[derive(Parser, Debug)]
 struct Opts {
@@ -55,13 +54,15 @@ async fn main() {
         SubCommand::Matrix(a) => {
             println!("\n\n\n\n\n\n\n\n");
             if a.time {
-                let mut btc_time_matrix = BtcTimeMatrix::default().await;
-                while let Some(screen) = btc_time_matrix.next().await {
+                let mut matrix = BtcTimeMatrix::default().await;
+                loop {
+                    let screen = matrix.gen_screen().await;
                     println!("\x1b[8A{}", screen.to_string());
                 }
             } else {
-                let mut btc_eth_matrix = BtcEthMatrix::default().await;
-                while let Some(screen) = btc_eth_matrix.next().await {
+                let mut matrix = BtcEthMatrix::default().await;
+                loop {
+                    let screen = matrix.gen_screen().await;
                     println!("\x1b[8A{}", screen.to_string());
                 }
             }
@@ -71,16 +72,18 @@ async fn main() {
             println!("\n\n\n\n\n\n\n\n");
 
             if a.time {
-                let mut btc_time_matrix = BtcTimeMatrix::default().await;
-                while let Some(screen) = btc_time_matrix.next().await {
+                let mut matrix = BtcTimeMatrix::default().await;
+                loop {
+                    let screen = matrix.gen_screen().await;
                     if a.print {
                         println!("\x1b[8A{}", screen.to_string());
                     }
                     awtrix.plot(&screen.serialize()).await
                 }
             } else {
-                let mut btc_eth_matrix = BtcEthMatrix::default().await;
-                while let Some(screen) = btc_eth_matrix.next().await {
+                let mut matrix = BtcEthMatrix::default().await;
+                loop {
+                    let screen = matrix.gen_screen().await;
                     if a.print {
                         println!("\x1b[8A{}", screen.to_string());
                     }

@@ -9,7 +9,7 @@ use super::{
     },
     ws_coin::{Market, Price, WsCoin},
 };
-use futures::{Stream, StreamExt as _};
+use futures::StreamExt as _;
 use ordered_float::NotNan;
 
 pub struct BtcMatrix {
@@ -24,27 +24,10 @@ impl BtcMatrix {
             ws_coin: WsCoin::default().await,
         }
     }
-    pub async fn recv_screen(&mut self) -> Screen {
+    pub async fn gen_screen(&mut self) -> Screen {
         let price: Price = self.ws_coin.next().await.unwrap();
         self.pq.push(price.price);
         self.pq.to_screen(PlotKind::FlatLine, false)
-    }
-}
-
-impl Stream for BtcMatrix {
-    type Item = Screen;
-    fn poll_next(
-        self: std::pin::Pin<&mut Self>,
-        cx: &mut std::task::Context,
-    ) -> std::task::Poll<Option<Self::Item>> {
-        let _self = self.get_mut();
-        let stream = async_stream::stream! {
-            loop {
-                yield _self.recv_screen().await;
-            }
-        };
-        tokio::pin!(stream);
-        stream.poll_next(cx)
     }
 }
 
@@ -78,7 +61,7 @@ impl BtcEthMatrix {
         }
     }
 
-    pub async fn recv_screen(&mut self) -> Screen {
+    pub async fn gen_screen(&mut self) -> Screen {
         let price: Price = self.ws_coin.next().await.unwrap();
         if price.name == "BTC" {
             self.btc_price = Some(price.price);
@@ -116,23 +99,6 @@ impl BtcEthMatrix {
     }
 }
 
-impl Stream for BtcEthMatrix {
-    type Item = Screen;
-    fn poll_next(
-        self: std::pin::Pin<&mut Self>,
-        cx: &mut std::task::Context,
-    ) -> std::task::Poll<Option<Self::Item>> {
-        let _self = self.get_mut();
-        let stream = async_stream::stream! {
-            loop {
-                yield _self.recv_screen().await;
-            }
-        };
-        tokio::pin!(stream);
-        stream.poll_next(cx)
-    }
-}
-
 pub struct BtcTimeMatrix {
     pq: PriceQueue,
     ws_coin: WsCoin,
@@ -154,10 +120,14 @@ impl BtcTimeMatrix {
             price: None,
         }
     }
-    async fn recv_screen(&mut self) -> Screen {
-        let price: Price = self.ws_coin.next().await.unwrap();
-        self.price = Some(price.price);
-        self.pq.push(price.price);
+    pub async fn gen_screen(&mut self) -> Screen {
+        tokio::select! {
+            Some(price) = self.ws_coin.next() => {
+                self.price = Some(price.price);
+                self.pq.push(price.price);
+            },
+            _ = tokio::time::sleep(std::time::Duration::from_millis(100)) => {}
+        }
 
         let mut screen = self.pq.to_screen(PlotKind::FlatLine, false);
         if self.price.is_some() {
@@ -185,22 +155,5 @@ impl BtcTimeMatrix {
         );
 
         screen
-    }
-}
-
-impl Stream for BtcTimeMatrix {
-    type Item = Screen;
-    fn poll_next(
-        self: std::pin::Pin<&mut Self>,
-        cx: &mut std::task::Context,
-    ) -> std::task::Poll<Option<Self::Item>> {
-        let _self = self.get_mut();
-        let stream = async_stream::stream! {
-            loop {
-                yield _self.recv_screen().await;
-            }
-        };
-        tokio::pin!(stream);
-        stream.poll_next(cx)
     }
 }
