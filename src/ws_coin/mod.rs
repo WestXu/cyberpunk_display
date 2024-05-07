@@ -80,7 +80,7 @@ impl WsCoin {
                     break;
                 }
                 Err(error) => {
-                    println!("{}", error);
+                    println!("error happened during connection: {error}, retrying...");
                 }
             }
         }
@@ -145,12 +145,7 @@ impl WsCoin {
                     Ok(price) => yield price,
                     Err(error) => {
                         println!("{}\n\n\n\n\n\n\n\n", error);
-                        match error {
-                            RecvError::RecevingError(_) => {
-                                self.reconnect().await;
-                            }
-                            RecvError::UnexpectedMsgError(_) | RecvError::ParsingError(_) => (),
-                        }
+                        self.reconnect().await
                     }
                 }
             }
