@@ -320,7 +320,7 @@ impl Character {
                     font,
                     pixels: vec![
                         vec![x, o, o], //
-                        vec![x, o, x], //
+                        vec![x, o, o], //
                         vec![o, o, x], //
                     ],
                 },
