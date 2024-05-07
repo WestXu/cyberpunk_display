@@ -1,5 +1,3 @@
-use crate::ws_coin::connect;
-
 use super::{
     price_queue::{PlotKind, PriceQueue},
     screen::{
@@ -52,10 +50,7 @@ impl BtcEthMatrix {
         ];
         BtcEthMatrix {
             pq: PriceQueue::default(),
-            ws_coin: WsCoin {
-                socket: connect(&markets).await.unwrap(),
-                markets,
-            },
+            ws_coin: WsCoin::new(markets).await,
             btc_price: None,
             eth_price: None,
         }
@@ -113,10 +108,7 @@ impl BtcTimeMatrix {
         }];
         BtcTimeMatrix {
             pq: PriceQueue::default(),
-            ws_coin: WsCoin {
-                socket: connect(&markets).await.unwrap(),
-                markets,
-            },
+            ws_coin: WsCoin::new(markets).await,
             price: None,
         }
     }
