@@ -1,5 +1,4 @@
-use reqwest::blocking::Client;
-use reqwest::header;
+use reqwest::{header, Client};
 use std::time::SystemTime;
 
 pub struct Awtrix {
@@ -21,7 +20,7 @@ impl Awtrix {
         }
     }
 
-    fn push(&self, data: serde_json::Value, endpoint: &str) {
+    async fn push(&self, data: serde_json::Value, endpoint: &str) {
         let _ = self
             .ssn
             .post(format!(
@@ -30,19 +29,21 @@ impl Awtrix {
             ))
             .body(serde_json::to_string(&data).unwrap())
             .header(header::CONTENT_TYPE, "application/json")
-            .send();
+            .send()
+            .await;
     }
 
-    fn exit(&self) {
+    pub async fn exit(&self) {
         self.push(
             serde_json::json!({
                 "draw": [{"type": "exit"}],
             }),
             "draw",
         )
+        .await
     }
 
-    pub fn plot(&mut self, rgb565: &[u16]) {
+    pub async fn plot(&mut self, rgb565: &[u16]) {
         if self.last_sent_time.elapsed().unwrap().as_millis() < self.min_interval {
             // 小于0.1秒的间隔没有必要发送，人眼无法分辨
             return;
@@ -60,13 +61,8 @@ impl Awtrix {
                 ],
             }),
             "draw",
-        );
+        )
+        .await;
         self.last_sent_time = SystemTime::now();
-    }
-}
-
-impl Drop for Awtrix {
-    fn drop(&mut self) {
-        self.exit()
     }
 }

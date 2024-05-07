@@ -1,18 +1,14 @@
 pub mod parse_json;
 
-use native_tls::TlsConnector;
-use std::error::Error;
-use std::fmt;
-use std::net::TcpStream;
-use std::thread;
-use std::time::Duration;
-
-use tungstenite::{client, Message};
+use futures::{SinkExt, Stream, StreamExt};
+use ordered_float::NotNan;
+use parse_json::{parse_json, Msg};
+use std::{error::Error, fmt, time::Duration};
+use tokio::net::TcpStream;
+use tokio_tungstenite::{connect_async, tungstenite::Message, MaybeTlsStream, WebSocketStream};
 use url::Url;
 
-use ordered_float::NotNan;
-
-use parse_json::{parse_json, Msg};
+type PriceSocket = WebSocketStream<MaybeTlsStream<TcpStream>>;
 
 #[derive(Debug)]
 pub struct Price {
@@ -46,47 +42,14 @@ impl fmt::Display for RecvError {
 
 pub struct WsCoin {
     pub markets: Vec<Market>,
-    pub socket: Option<tungstenite::WebSocket<native_tls::TlsStream<std::net::TcpStream>>>,
+    pub socket: PriceSocket,
 }
 
-impl Default for WsCoin {
-    fn default() -> Self {
-        WsCoin {
-            markets: vec![Market {
-                symbol: "BTCUSDT".to_string(),
-                name: "BTC".to_string(),
-            }],
-            socket: None,
-        }
-    }
-}
-
-impl Iterator for WsCoin {
-    type Item = Price;
-    fn next(&mut self) -> Option<Self::Item> {
-        match self.recv_price() {
-            Ok(price) => Some(price),
-            Err(error) => {
-                println!("{}\n\n\n\n\n\n\n\n", error);
-                match error {
-                    RecvError::RecevingError(_) => {
-                        self.reconnect();
-                        self.next()
-                    }
-                    RecvError::UnexpectedMsgError(_) | RecvError::ParsingError(_) => self.next(),
-                }
-            }
-        }
-    }
-}
-
-fn connect(
-    markets: &[Market],
-) -> Result<tungstenite::WebSocket<native_tls::TlsStream<std::net::TcpStream>>, Box<dyn Error>> {
-    let stream = TcpStream::connect("data-stream.binance.com:443")?;
-    stream.set_read_timeout(Some(Duration::from_secs(60)))?;
-    let stream = TlsConnector::new()?.connect("data-stream.binance.com", stream)?;
-    let (mut socket, _) = client(Url::parse("wss://data-stream.binance.com/ws/test")?, stream)?;
+pub async fn connect(markets: &[Market]) -> anyhow::Result<PriceSocket> {
+    println!("Connecting to Binance WebSocket...");
+    let url = Url::parse("wss://data-stream.binance.com/ws/test")?;
+    let (mut socket, _) = connect_async(url).await?;
+    println!("Connected to Binance WebSocket");
 
     let msg = serde_json::json!({
         "method": "SUBSCRIBE",
@@ -94,73 +57,116 @@ fn connect(
         "id": 1
     })
     .to_string();
-    socket.send(Message::Text(msg))?;
-
+    socket.send(Message::Text(msg)).await?;
     Ok(socket)
 }
 
 impl WsCoin {
-    fn connect(&mut self) {
-        match connect(&self.markets) {
-            Ok(socket) => self.socket = Some(socket),
-            Err(error) => {
-                println!("{}", error);
-                self.reconnect();
+    pub async fn default() -> Self {
+        let markets = vec![Market {
+            symbol: "BTCUSDT".to_string(),
+            name: "BTC".to_string(),
+        }];
+        WsCoin {
+            socket: connect(&markets).await.unwrap(),
+            markets,
+        }
+    }
+    async fn connect(&mut self) {
+        loop {
+            match connect(&self.markets).await {
+                Ok(socket) => {
+                    self.socket = socket;
+                    break;
+                }
+                Err(error) => {
+                    println!("{}", error);
+                }
             }
-        };
+        }
     }
 
-    fn reconnect(&mut self) {
+    async fn reconnect(&mut self) {
         println!("Reconnect in 60s...");
-        thread::sleep(Duration::from_secs(60));
+        tokio::time::sleep(Duration::from_secs(60)).await;
         println!("Reconnecting...");
-        self.connect();
+        self.connect().await;
         println!("Reconnected. \n\n\n\n\n\n\n\n");
     }
 
-    fn recv_price(&mut self) -> Result<Price, RecvError> {
-        let socket = match self.socket.as_mut() {
-            None => {
-                self.connect();
-                self.socket.as_mut().unwrap()
-            }
-            Some(socket) => socket,
-        };
-
-        match socket.read() {
-            Ok(Message::Text(msg)) => match parse_json(&msg) {
-                Ok(msg) => match msg {
-                    Msg::Subscribed => self.recv_price(),
-                    Msg::Price { symbol, price: p } => Ok(Price {
-                        name: {
-                            let mut name = None;
-                            for market in &self.markets {
-                                if market.symbol == symbol {
-                                    name = Some(market.name.clone());
-                                    break;
-                                }
-                            }
-                            name.unwrap_or_else(|| {
-                                panic!("market name not found for symbol {}", symbol)
+    async fn recv_price(&mut self) -> Result<Price, RecvError> {
+        while let Some(msg) = self.socket.next().await {
+            match msg {
+                Ok(Message::Text(msg)) => match parse_json(&msg) {
+                    Ok(msg) => match msg {
+                        Msg::Subscribed => continue,
+                        Msg::Price { symbol, price: p } => {
+                            return Ok(Price {
+                                name: {
+                                    let mut name = None;
+                                    for market in &self.markets {
+                                        if market.symbol == symbol {
+                                            name = Some(market.name.clone());
+                                            break;
+                                        }
+                                    }
+                                    name.unwrap_or_else(|| {
+                                        panic!("market name not found for symbol {}", symbol)
+                                    })
+                                },
+                                price: p,
                             })
-                        },
-                        price: p,
-                    }),
+                        }
+                    },
+                    Err(error) => panic!("Error {} happened parsing json: {}", error, &msg),
                 },
-                Err(error) => panic!("Error {} happened parsing json: {}", error, &msg),
-            },
-            Ok(Message::Ping(_)) => {
-                self.socket
-                    .as_mut()
-                    .unwrap()
-                    .send(Message::Pong(vec![]))
-                    .expect("failed sending pong");
-                self.recv_price()
+                Ok(Message::Ping(_)) => {
+                    self.socket
+                        .send(Message::Pong(vec![]))
+                        .await
+                        .expect("failed sending pong");
+                    continue;
+                }
+                Ok(msg) => {
+                    return Err(RecvError::UnexpectedMsgError(format!(
+                        "Unexpected message received: {msg}"
+                    )))
+                }
+                Err(error) => return Err(RecvError::RecevingError(error.to_string())),
             }
-            Ok(msg) => Err(RecvError::UnexpectedMsgError(format!(
-                "Unexpected message received: {msg}"
-            ))),
-            Err(error) => Err(RecvError::RecevingError(error.to_string())),
         }
+        Err(RecvError::RecevingError("Disconnected".to_string()))
+    }
+
+    fn subscribe(&mut self) -> impl Stream<Item = Price> + '_ {
+        async_stream::stream! {
+            loop {
+                match self.recv_price().await {
+                    Ok(price) => yield price,
+                    Err(error) => {
+                        println!("{}\n\n\n\n\n\n\n\n", error);
+                        match error {
+                            RecvError::RecevingError(_) => {
+                                self.reconnect().await;
+                            }
+                            RecvError::UnexpectedMsgError(_) | RecvError::ParsingError(_) => (),
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+impl Stream for WsCoin {
+    type Item = Price;
+
+    fn poll_next(
+        self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context,
+    ) -> std::task::Poll<Option<Self::Item>> {
+        let stream = self.get_mut().subscribe();
+        tokio::pin!(stream);
+        stream.poll_next(cx)
     }
 }

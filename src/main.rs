@@ -5,6 +5,7 @@ use cyberpunk_display::matrix::{BtcEthMatrix, BtcTimeMatrix};
 use cyberpunk_display::nixie;
 #[cfg(feature = "nixie")]
 use cyberpunk_display::ws_coin::WsCoin;
+use futures::StreamExt as _;
 
 #[derive(Parser, Debug)]
 struct Opts {
@@ -46,16 +47,23 @@ struct Nixie {
     serial_port: String,
 }
 
-fn main() {
+#[tokio::main]
+async fn main() {
     let opts: Opts = Opts::parse();
 
     match opts.subcmd {
         SubCommand::Matrix(a) => {
             println!("\n\n\n\n\n\n\n\n");
             if a.time {
-                BtcTimeMatrix::default().for_each(|screen| println!("{}", screen.to_string()));
+                let mut btc_time_matrix = BtcTimeMatrix::default().await;
+                while let Some(screen) = btc_time_matrix.next().await {
+                    println!("\x1b[8A{}", screen.to_string());
+                }
             } else {
-                BtcEthMatrix::default().for_each(|screen| println!("{}", screen.to_string()));
+                let mut btc_eth_matrix = BtcEthMatrix::default().await;
+                while let Some(screen) = btc_eth_matrix.next().await {
+                    println!("\x1b[8A{}", screen.to_string());
+                }
             }
         }
         SubCommand::Awtrix(a) => {
@@ -63,19 +71,21 @@ fn main() {
             println!("\n\n\n\n\n\n\n\n");
 
             if a.time {
-                BtcTimeMatrix::default().for_each(|screen| {
+                let mut btc_time_matrix = BtcTimeMatrix::default().await;
+                while let Some(screen) = btc_time_matrix.next().await {
                     if a.print {
                         println!("\x1b[8A{}", screen.to_string());
                     }
-                    awtrix.plot(&screen.serialize())
-                });
+                    awtrix.plot(&screen.serialize()).await
+                }
             } else {
-                BtcEthMatrix::default().for_each(|screen| {
+                let mut btc_eth_matrix = BtcEthMatrix::default().await;
+                while let Some(screen) = btc_eth_matrix.next().await {
                     if a.print {
                         println!("\x1b[8A{}", screen.to_string());
                     }
-                    awtrix.plot(&screen.serialize())
-                });
+                    awtrix.plot(&screen.serialize()).await
+                }
             }
         }
         #[cfg(feature = "nixie")]

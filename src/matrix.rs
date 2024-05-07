@@ -1,22 +1,50 @@
-use super::price_queue::{PlotKind, PriceQueue};
-use super::screen::character::{Character, Font};
-use super::screen::rgb::{colorize, Rgb888};
-use super::screen::Screen;
-use super::ws_coin::{Market, Price, WsCoin};
+use crate::ws_coin::connect;
+
+use super::{
+    price_queue::{PlotKind, PriceQueue},
+    screen::{
+        character::{Character, Font},
+        rgb::{colorize, Rgb888},
+        Screen,
+    },
+    ws_coin::{Market, Price, WsCoin},
+};
+use futures::{Stream, StreamExt as _};
 use ordered_float::NotNan;
 
-#[derive(Default)]
 pub struct BtcMatrix {
     pq: PriceQueue,
     ws_coin: WsCoin,
 }
 
-impl Iterator for BtcMatrix {
+impl BtcMatrix {
+    pub async fn default() -> Self {
+        BtcMatrix {
+            pq: PriceQueue::default(),
+            ws_coin: WsCoin::default().await,
+        }
+    }
+    pub async fn recv_screen(&mut self) -> Screen {
+        let price: Price = self.ws_coin.next().await.unwrap();
+        self.pq.push(price.price);
+        self.pq.to_screen(PlotKind::FlatLine, false)
+    }
+}
+
+impl Stream for BtcMatrix {
     type Item = Screen;
-    fn next(&mut self) -> Option<Self::Item> {
-        let p = self.ws_coin.next().unwrap().price;
-        self.pq.push(p);
-        Some(self.pq.to_screen(PlotKind::TrendLine, true))
+    fn poll_next(
+        self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context,
+    ) -> std::task::Poll<Option<Self::Item>> {
+        let _self = self.get_mut();
+        let stream = async_stream::stream! {
+            loop {
+                yield _self.recv_screen().await;
+            }
+        };
+        tokio::pin!(stream);
+        stream.poll_next(cx)
     }
 }
 
@@ -27,33 +55,31 @@ pub struct BtcEthMatrix {
     eth_price: Option<NotNan<f64>>,
 }
 
-impl Default for BtcEthMatrix {
-    fn default() -> Self {
+impl BtcEthMatrix {
+    pub async fn default() -> Self {
+        let markets = vec![
+            Market {
+                symbol: "BTCUSDT".to_string(),
+                name: "BTC".to_string(),
+            },
+            Market {
+                symbol: "ETHUSDT".to_string(),
+                name: "ETH".to_string(),
+            },
+        ];
         BtcEthMatrix {
             pq: PriceQueue::default(),
             ws_coin: WsCoin {
-                markets: vec![
-                    Market {
-                        symbol: "BTCUSDT".to_string(),
-                        name: "BTC".to_string(),
-                    },
-                    Market {
-                        symbol: "ETHUSDT".to_string(),
-                        name: "ETH".to_string(),
-                    },
-                ],
-                socket: None,
+                socket: connect(&markets).await.unwrap(),
+                markets,
             },
             btc_price: None,
             eth_price: None,
         }
     }
-}
 
-impl Iterator for BtcEthMatrix {
-    type Item = Screen;
-    fn next(&mut self) -> Option<Self::Item> {
-        let price: Price = self.ws_coin.next().unwrap();
+    pub async fn recv_screen(&mut self) -> Screen {
+        let price: Price = self.ws_coin.next().await.unwrap();
         if price.name == "BTC" {
             self.btc_price = Some(price.price);
             self.pq.push(price.price);
@@ -86,7 +112,24 @@ impl Iterator for BtcEthMatrix {
                 5,
             );
         }
-        Some(screen)
+        screen
+    }
+}
+
+impl Stream for BtcEthMatrix {
+    type Item = Screen;
+    fn poll_next(
+        self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context,
+    ) -> std::task::Poll<Option<Self::Item>> {
+        let _self = self.get_mut();
+        let stream = async_stream::stream! {
+            loop {
+                yield _self.recv_screen().await;
+            }
+        };
+        tokio::pin!(stream);
+        stream.poll_next(cx)
     }
 }
 
@@ -96,26 +139,23 @@ pub struct BtcTimeMatrix {
     price: Option<NotNan<f64>>,
 }
 
-impl Default for BtcTimeMatrix {
-    fn default() -> Self {
+impl BtcTimeMatrix {
+    pub async fn default() -> Self {
+        let markets = vec![Market {
+            symbol: "BTCUSDT".to_string(),
+            name: "BTC".to_string(),
+        }];
         BtcTimeMatrix {
             pq: PriceQueue::default(),
             ws_coin: WsCoin {
-                markets: vec![Market {
-                    symbol: "BTCUSDT".to_string(),
-                    name: "BTC".to_string(),
-                }],
-                socket: None,
+                socket: connect(&markets).await.unwrap(),
+                markets,
             },
             price: None,
         }
     }
-}
-
-impl Iterator for BtcTimeMatrix {
-    type Item = Screen;
-    fn next(&mut self) -> Option<Self::Item> {
-        let price: Price = self.ws_coin.next().unwrap();
+    async fn recv_screen(&mut self) -> Screen {
+        let price: Price = self.ws_coin.next().await.unwrap();
         self.price = Some(price.price);
         self.pq.push(price.price);
 
@@ -144,6 +184,23 @@ impl Iterator for BtcTimeMatrix {
             5,
         );
 
-        Some(screen)
+        screen
+    }
+}
+
+impl Stream for BtcTimeMatrix {
+    type Item = Screen;
+    fn poll_next(
+        self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context,
+    ) -> std::task::Poll<Option<Self::Item>> {
+        let _self = self.get_mut();
+        let stream = async_stream::stream! {
+            loop {
+                yield _self.recv_screen().await;
+            }
+        };
+        tokio::pin!(stream);
+        stream.poll_next(cx)
     }
 }
