@@ -4,6 +4,6 @@ COPY Cargo.toml /app
 WORKDIR /app
 RUN cargo build --release
 
-FROM rust:latest
+FROM kubeimages/distroless-cc
 COPY --from=build-env /app/target/release/cyberpunk_display /
 ENTRYPOINT ["./cyberpunk_display"]
