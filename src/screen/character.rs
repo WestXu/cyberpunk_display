@@ -319,8 +319,8 @@ impl Character {
                 '5' => Character {
                     font,
                     pixels: vec![
-                        vec![x, o, x], //
                         vec![x, o, o], //
+                        vec![x, o, x], //
                         vec![o, o, x], //
                     ],
                 },
