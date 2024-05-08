@@ -295,9 +295,9 @@ impl Character {
                 '2' => Character {
                     font,
                     pixels: vec![
-                        vec![o, o, x], //
-                        vec![x, o, x], //
-                        vec![x, o, o], //
+                        vec![o, o, o], //
+                        vec![x, x, x], //
+                        vec![o, o, o], //
                     ],
                 },
                 '3' => Character {
@@ -319,7 +319,7 @@ impl Character {
                 '5' => Character {
                     font,
                     pixels: vec![
-                        vec![x, o, o], //
+                        vec![x, o, x], //
                         vec![x, o, o], //
                         vec![o, o, x], //
                     ],
