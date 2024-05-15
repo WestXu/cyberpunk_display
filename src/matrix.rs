@@ -84,7 +84,7 @@ impl BtcEthMatrix {
                 &colorize(
                     &minor_cs.pixels,
                     &Rgb888::new(255, 255, 255),
-                    &Rgb888::new(170, 170, 170),
+                    &Rgb888::new(200, 200, 200),
                 ),
                 32 - (minor_cs.pixels[0].len() + 1),
                 5,
@@ -140,7 +140,7 @@ impl BtcTimeMatrix {
             &colorize(
                 &minor_cs.pixels,
                 &Rgb888::new(255, 255, 255),
-                &Rgb888::new(170, 170, 170),
+                &Rgb888::new(200, 200, 200),
             ),
             32 - (minor_cs.pixels[0].len() + 1),
             5,
