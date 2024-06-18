@@ -52,7 +52,7 @@ fn test_pq_screen_2_rows() {
             + Screen::from_chars(Character::from_float(p, Font::Medium));
         let minor_cs = Character::from_float(p / 100.0, Font::Small);
         screen.draw(&minor_cs.pixels, 32 - (minor_cs.pixels[0].len() + 1), 5);
-        println!("\x1b[8A{}", screen.to_string());
+        println!("\x1b[8A{}", screen);
         thread::sleep(Duration::from_millis(100));
     }
 }

@@ -57,13 +57,13 @@ async fn main() {
                 let mut matrix = BtcTimeMatrix::default().await;
                 loop {
                     let screen = matrix.gen_screen().await;
-                    println!("\x1b[8A{}", screen.to_string());
+                    println!("\x1b[8A{}", screen);
                 }
             } else {
                 let mut matrix = BtcEthMatrix::default().await;
                 loop {
                     let screen = matrix.gen_screen().await;
-                    println!("\x1b[8A{}", screen.to_string());
+                    println!("\x1b[8A{}", screen);
                 }
             }
         }
@@ -76,7 +76,7 @@ async fn main() {
                 loop {
                     let screen = matrix.gen_screen().await;
                     if a.print {
-                        println!("\x1b[8A{}", screen.to_string());
+                        println!("\x1b[8A{}", screen);
                     }
                     awtrix.plot(&screen.serialize()).await
                 }
@@ -85,7 +85,7 @@ async fn main() {
                 loop {
                     let screen = matrix.gen_screen().await;
                     if a.print {
-                        println!("\x1b[8A{}", screen.to_string());
+                        println!("\x1b[8A{}", screen);
                     }
                     awtrix.plot(&screen.serialize()).await
                 }

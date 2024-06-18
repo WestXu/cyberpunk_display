@@ -395,9 +395,9 @@ impl Character {
     }
 }
 
-impl ToString for Character {
-    fn to_string(&self) -> String {
-        pixels_to_string(&self.pixels)
+impl std::fmt::Display for Character {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{}", pixels_to_string(&self.pixels))
     }
 }
 

@@ -159,10 +159,6 @@ impl PriceQueue {
 
 impl fmt::Display for PriceQueue {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "{:}",
-            self.to_screen(PlotKind::TrendLine, true).to_string()
-        )
+        write!(f, "{:}", self.to_screen(PlotKind::TrendLine, true))
     }
 }
