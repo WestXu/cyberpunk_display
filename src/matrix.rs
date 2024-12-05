@@ -74,7 +74,7 @@ impl BtcEthMatrix {
                     &Rgb888::new(255, 255, 255),
                     &Rgb888::new(255, 255, 0),
                 ),
-                32 - (major_cs.pixels[0].len() + 1),
+                32usize.saturating_sub(major_cs.pixels[0].len() + 1),
                 0,
             );
         }
@@ -86,7 +86,7 @@ impl BtcEthMatrix {
                     &Rgb888::new(255, 255, 255),
                     &Rgb888::new(200, 200, 200),
                 ),
-                32 - (minor_cs.pixels[0].len() + 1),
+                32usize.saturating_sub(minor_cs.pixels[0].len() + 1),
                 5,
             );
         }
@@ -130,7 +130,7 @@ impl BtcTimeMatrix {
                     &Rgb888::new(255, 255, 255),
                     &Rgb888::new(255, 255, 0),
                 ),
-                32 - (major_cs.pixels[0].len() + 1),
+                32usize.saturating_sub(major_cs.pixels[0].len() + 1),
                 0,
             );
         }
@@ -142,7 +142,7 @@ impl BtcTimeMatrix {
                 &Rgb888::new(255, 255, 255),
                 &Rgb888::new(200, 200, 200),
             ),
-            32 - (minor_cs.pixels[0].len() + 1),
+            32usize.saturating_sub(minor_cs.pixels[0].len() + 1),
             5,
         );
 
