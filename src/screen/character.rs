@@ -2,7 +2,7 @@ use std::ops;
 
 use super::pixels_to_string::pixels_to_string;
 use super::rgb::Rgb888;
-use ordered_float::NotNan;
+use rust_decimal::prelude::*;
 
 // Medium and Small fonts inspied by https://github.com/oidoid/mem
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -375,7 +375,7 @@ impl Character {
             },
         }
     }
-    pub fn from_float(p: NotNan<f64>, font: Font) -> Self {
+    pub fn from_float(p: Decimal, font: Font) -> Self {
         format!("{:.2}", p)
             .chars()
             .map(|c| Character::new(c, font))

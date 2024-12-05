@@ -1,8 +1,8 @@
 pub mod parse_json;
 
 use futures::{SinkExt, Stream, StreamExt};
-use ordered_float::NotNan;
 use parse_json::{parse_json, Msg};
+use rust_decimal::prelude::*;
 use std::{error::Error, fmt, sync::Arc, time::Duration};
 use tokio::{net::TcpStream, sync::Mutex};
 use tokio_tungstenite::{connect_async, tungstenite::Message, MaybeTlsStream, WebSocketStream};
@@ -13,7 +13,7 @@ type PriceSocket = WebSocketStream<MaybeTlsStream<TcpStream>>;
 #[derive(Debug)]
 pub struct Price {
     pub name: String,
-    pub price: NotNan<f64>,
+    pub price: Decimal,
 }
 
 #[derive(Clone)]

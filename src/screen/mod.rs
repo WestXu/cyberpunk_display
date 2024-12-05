@@ -4,7 +4,7 @@ pub mod character;
 mod pixels_to_string;
 pub mod rgb;
 
-use ordered_float::NotNan;
+use rust_decimal::prelude::*;
 
 use character::{Character, Font};
 
@@ -60,7 +60,7 @@ impl Screen {
         screen.draw(&cs.pixels, 32 - (cs.pixels[0].len() + 1), 0);
         screen
     }
-    pub fn from_float(p: NotNan<f64>) -> Self {
+    pub fn from_float(p: Decimal) -> Self {
         Screen::from_chars(Character::from_float(p, Font::Large))
     }
     pub fn serialize(&self) -> Vec<u16> {

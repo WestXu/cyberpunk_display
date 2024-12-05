@@ -8,7 +8,7 @@ use super::{
     ws_coin::{Market, Price, WsCoin},
 };
 use futures::StreamExt as _;
-use ordered_float::NotNan;
+use rust_decimal::prelude::*;
 
 pub struct BtcMatrix {
     pq: PriceQueue,
@@ -32,8 +32,8 @@ impl BtcMatrix {
 pub struct BtcEthMatrix {
     pq: PriceQueue,
     ws_coin: WsCoin,
-    btc_price: Option<NotNan<f64>>,
-    eth_price: Option<NotNan<f64>>,
+    btc_price: Option<Decimal>,
+    eth_price: Option<Decimal>,
 }
 
 impl BtcEthMatrix {
@@ -97,7 +97,7 @@ impl BtcEthMatrix {
 pub struct BtcTimeMatrix {
     pq: PriceQueue,
     ws_coin: WsCoin,
-    price: Option<NotNan<f64>>,
+    price: Option<Decimal>,
 }
 
 impl BtcTimeMatrix {

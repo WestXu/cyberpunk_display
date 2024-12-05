@@ -2,7 +2,8 @@ use std::cmp::Ordering;
 use std::collections::vec_deque::VecDeque;
 use std::fmt;
 
-use ordered_float::NotNan;
+use rust_decimal::prelude::*;
+use rust_decimal_macros::dec;
 
 use super::screen::{Rgb888, Screen};
 
@@ -20,7 +21,7 @@ pub enum PlotKind {
 
 #[derive(Debug)]
 pub struct PriceQueue {
-    q: VecDeque<NotNan<f64>>,
+    q: VecDeque<Decimal>,
 }
 
 impl Default for PriceQueue {
@@ -32,7 +33,7 @@ impl Default for PriceQueue {
 }
 
 impl PriceQueue {
-    pub fn push(&mut self, p: NotNan<f64>) {
+    pub fn push(&mut self, p: Decimal) {
         if self.q.len() == 32 {
             self.q.pop_front();
         }
@@ -73,13 +74,13 @@ impl PriceQueue {
 
     pub fn to_int_pos_v(&self) -> Vec<usize> {
         let (min, max) = (self.q.iter().min().unwrap(), self.q.iter().max().unwrap());
-        let rng: NotNan<f64> = max - min;
-        if rng == 0.0 {
+        let rng: Decimal = max - min;
+        if rng.is_zero() {
             vec![3; 32]
         } else {
             self.q
                 .iter()
-                .map(|p| ((p - min) / rng * 7.0).round() as usize)
+                .map(|p| ((p - min) / rng * dec!(7.0)).round().to_f64().unwrap() as usize)
                 .collect()
         }
     }

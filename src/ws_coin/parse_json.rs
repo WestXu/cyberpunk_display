@@ -1,12 +1,12 @@
 use std::error::Error;
 
-use ordered_float::NotNan;
+use rust_decimal::prelude::*;
 use serde::Deserialize;
 
 #[derive(Debug)]
 pub enum Msg {
     Subscribed,
-    Price { symbol: String, price: NotNan<f64> },
+    Price { symbol: String, price: Decimal },
 }
 
 #[derive(Deserialize, PartialEq, Debug)]
@@ -28,7 +28,7 @@ pub fn parse_json(data: &str) -> Result<Msg, Box<dyn Error>> {
         Received::Subscribed { .. } => Msg::Subscribed,
         Received::Update { symbol, price } => Msg::Price {
             symbol,
-            price: NotNan::new(price.parse().unwrap())?,
+            price: price.parse()?,
         },
     })
 }

@@ -5,7 +5,12 @@ authors = ["WestXu <xu-lai-xi@qq.com>"]
 edition = "2021"
 
 [dependencies]
-ordered-float = "4.2.0"
+rust_decimal = { version = "1.36", features = [
+    "maths",
+    "serde-float",
+    "serde-with-arbitrary-precision", # must enable when enabled arbitrary_precision of serde_json
+] }
+rust_decimal_macros = { version = "1.36" }
 ansi_term = "0.12.1"
 tokio-tungstenite = { version = "0.21.0", features = [
     "rustls-tls-webpki-roots",
