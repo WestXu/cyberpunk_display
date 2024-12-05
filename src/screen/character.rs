@@ -376,8 +376,13 @@ impl Character {
         }
     }
     pub fn from_float(p: Decimal, font: Font) -> Self {
-        format!("{:.2}", p)
-            .chars()
+        let p = {
+            match font {
+                Font::Medium if format!("{:.2}", p).len() > 8 => format!("{:.1}", p), // bitcoin price exceeds 100k
+                _ => format!("{:.2}", p),
+            }
+        };
+        p.chars()
             .map(|c| Character::new(c, font))
             .reduce(|a, b| a + b)
             .unwrap()
