@@ -5,6 +5,11 @@ use cyberpunk_display::matrix::{BtcEthMatrix, BtcTimeMatrix};
 use cyberpunk_display::nixie;
 #[cfg(feature = "nixie")]
 use cyberpunk_display::ws_coin::WsCoin;
+use simplelog::{ColorChoice, CombinedLogger, LevelFilter, TermLogger, TerminalMode, WriteLogger};
+use std::{
+    fs::{create_dir_all, File},
+    path::PathBuf,
+};
 
 #[derive(Parser, Debug)]
 struct Opts {
@@ -48,7 +53,36 @@ struct Nixie {
 
 #[tokio::main]
 async fn main() {
+    {
+        let log_config = simplelog::ConfigBuilder::new()
+            .set_time_format_rfc3339()
+            .build();
+        CombinedLogger::init(vec![
+            TermLogger::new(
+                LevelFilter::Info,
+                log_config.clone(),
+                TerminalMode::Mixed,
+                ColorChoice::Auto,
+            ),
+            WriteLogger::new(LevelFilter::Debug, log_config, {
+                let log_dir = PathBuf::from("tmp/logs");
+                create_dir_all(&log_dir).unwrap();
+                File::create(log_dir.join(format!(
+                        "{}-{}.log",
+                        chrono::Local::now().format("%Y%m%d%H%M%S"),
+                        &uuid::Uuid::new_v4()
+                            .as_hyphenated()
+                            .encode_lower(&mut uuid::Uuid::encode_buffer())[..8]
+                    )))
+                .unwrap()
+            }),
+        ])
+        .unwrap();
+    }
+
     let opts: Opts = Opts::parse();
+
+    log::info!("Starting application with {opts:?}");
 
     match opts.subcmd {
         SubCommand::Matrix(a) => {

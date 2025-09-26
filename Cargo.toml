@@ -28,6 +28,9 @@ chrono = "0.4.38"
 anyhow = "1.0.83"
 futures = "0.3.30"
 async-stream = "0.3.5"
+simplelog = "0.12.2"
+uuid = { version = "1.16.0", features = ["v4"] }
+log = "0.4.19"
 
 [dev-dependencies]
 rand = "0.8.5"

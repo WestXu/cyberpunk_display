@@ -60,10 +60,10 @@ impl WsCoin {
 }
 
 async fn connect(markets: &[Market]) -> anyhow::Result<PriceSocket> {
-    println!("Connecting to Binance WebSocket...");
+    log::info!("Connecting to Binance WebSocket...");
     let url = Url::parse("wss://data-stream.binance.com/ws/test")?;
     let (mut socket, _) = connect_async(url).await?;
-    println!("Connected to Binance WebSocket");
+    log::info!("Connected to Binance WebSocket");
 
     let msg = serde_json::json!({
         "method": "SUBSCRIBE",
@@ -90,9 +90,9 @@ impl WsCoin {
         }
 
         *self.reconnecting.lock().await = true;
-        println!("Reconnect in 60s...");
+        log::info!("Reconnect in 60s...");
         tokio::time::sleep(Duration::from_secs(60)).await;
-        println!("Reconnecting...");
+        log::info!("Reconnecting...");
         let mut socket = self.socket.lock().await;
         loop {
             match connect(&self.markets).await {
@@ -101,11 +101,11 @@ impl WsCoin {
                     break;
                 }
                 Err(error) => {
-                    println!("error happened during connection: {error}, retrying...");
+                    log::info!("error happened during connection: {error}, retrying...");
                 }
             }
         }
-        println!("Reconnected. \n\n\n\n\n\n\n\n");
+        log::info!("Reconnected. \n\n\n\n\n\n\n\n");
         *self.reconnecting.lock().await = false;
     }
 
@@ -164,7 +164,7 @@ impl WsCoin {
                         match error {
                             RecvError::Disconnected => (),
                             _ => {
-                                println!("Error happened: {}\n\n\n\n\n\n\n\n", error);
+                                log::error!("Error happened: {}\n\n\n\n\n\n\n\n", error);
                             }
                         }
                         let _self = self.clone();

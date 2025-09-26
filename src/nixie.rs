@@ -29,20 +29,20 @@ impl Nixie {
         self.ser
             .write(&float_to_bytes(p))
             .expect(&format!("failed to send {p}"));
-        println!("Sent to Nixie {p}");
+        log::info!("Sent to Nixie {p}");
     }
     pub fn set_brightness(&mut self, b: u8) {
         assert!(b <= 8, "brightness should be between (0, 8)");
         self.ser
             .write(format!("TIMB{b}").as_bytes())
             .expect(&format!("failed to set brightness to {b}"));
-        println!("Set Nixie brightness to {b}");
+        log::info!("Set Nixie brightness to {b}");
     }
     pub fn close(&mut self) {
         self.ser
             .write("TIMDBBBBBBBBBBBB".as_bytes())
             .expect("Failed to close");
-        println!("Closed Nixie");
+        log::info!("Closed Nixie");
     }
 }
 
@@ -65,7 +65,7 @@ fn test_float_to_bytes() {
 fn list_serial_port() {
     let ports = serialport::available_ports().expect("No ports found!");
     for p in ports {
-        println!("{}", p.port_name);
+        log::info!("{}", p.port_name);
     }
 }
 
