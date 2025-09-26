@@ -43,18 +43,23 @@ impl fmt::Display for RecvError {
     }
 }
 
+enum ConnectionState {
+    Connected(Box<PriceSocket>),
+    Reconnecting,
+}
+
 #[derive(Clone)]
 pub struct WsCoin {
     markets: Vec<Market>,
-    socket: Arc<Mutex<PriceSocket>>,
-    reconnecting: Arc<Mutex<bool>>,
+    connection: Arc<Mutex<ConnectionState>>,
 }
 impl WsCoin {
     pub async fn new(markets: Vec<Market>) -> Self {
         WsCoin {
-            socket: Arc::new(Mutex::new(connect(&markets).await.unwrap())),
+            connection: Arc::new(Mutex::new(ConnectionState::Connected(Box::new(
+                connect(&markets).await.unwrap(),
+            )))),
             markets,
-            reconnecting: Arc::new(Mutex::new(false)),
         }
     }
 }
@@ -85,19 +90,25 @@ impl WsCoin {
     }
 
     async fn reconnect(&self) {
-        if *self.reconnecting.lock().await {
-            return;
+        {
+            let mut connection = self.connection.lock().await;
+
+            if matches!(*connection, ConnectionState::Reconnecting) {
+                return;
+            }
+
+            *connection = ConnectionState::Reconnecting;
         }
 
-        *self.reconnecting.lock().await = true;
         log::info!("Reconnect in 60s...");
         tokio::time::sleep(Duration::from_secs(60)).await;
         log::info!("Reconnecting...");
-        let mut socket = self.socket.lock().await;
+
         loop {
             match connect(&self.markets).await {
                 Ok(new_socket) => {
-                    *socket = new_socket;
+                    *self.connection.lock().await =
+                        ConnectionState::Connected(Box::new(new_socket));
                     break;
                 }
                 Err(error) => {
@@ -106,53 +117,68 @@ impl WsCoin {
             }
         }
         log::info!("Reconnected. \n\n\n\n\n\n\n\n");
-        *self.reconnecting.lock().await = false;
     }
 
     async fn recv_price(&mut self) -> Result<Price, RecvError> {
-        while let Some(msg) = self.socket.lock().await.next().await {
-            match msg {
-                Ok(Message::Text(msg)) => match parse_json(&msg) {
-                    Ok(msg) => match msg {
-                        Msg::Subscribed => continue,
-                        Msg::Price { symbol, price: p } => {
-                            return Ok(Price {
-                                name: {
-                                    let mut name = None;
-                                    for market in &self.markets {
-                                        if market.symbol == symbol {
-                                            name = Some(market.name.clone());
-                                            break;
-                                        }
-                                    }
-                                    name.unwrap_or_else(|| {
-                                        panic!("market name not found for symbol {}", symbol)
-                                    })
-                                },
-                                price: p,
-                            })
-                        }
-                    },
-                    Err(error) => panic!("Error {} happened parsing json: {}", error, &msg),
-                },
-                Ok(Message::Ping(_)) => {
-                    self.socket
-                        .lock()
-                        .await
-                        .send(Message::Pong(vec![]))
-                        .await
-                        .expect("failed sending pong");
+        loop {
+            let mut connection = self.connection.lock().await;
+            match &mut *connection {
+                ConnectionState::Reconnecting => {
+                    drop(connection);
+                    tokio::time::sleep(Duration::from_millis(100)).await;
                     continue;
                 }
-                Ok(msg) => {
-                    return Err(RecvError::UnexpectedMsgError(format!(
-                        "Unexpected message received: {msg}"
-                    )))
+                ConnectionState::Connected(socket) => {
+                    if let Some(msg) = socket.next().await {
+                        match msg {
+                            Ok(Message::Text(msg)) => match parse_json(&msg) {
+                                Ok(msg) => match msg {
+                                    Msg::Subscribed => continue,
+                                    Msg::Price { symbol, price: p } => {
+                                        return Ok(Price {
+                                            name: {
+                                                let mut name = None;
+                                                for market in &self.markets {
+                                                    if market.symbol == symbol {
+                                                        name = Some(market.name.clone());
+                                                        break;
+                                                    }
+                                                }
+                                                name.unwrap_or_else(|| {
+                                                    panic!(
+                                                        "market name not found for symbol {}",
+                                                        symbol
+                                                    )
+                                                })
+                                            },
+                                            price: p,
+                                        })
+                                    }
+                                },
+                                Err(error) => {
+                                    panic!("Error {} happened parsing json: {}", error, &msg)
+                                }
+                            },
+                            Ok(Message::Ping(_)) => {
+                                socket
+                                    .send(Message::Pong(vec![]))
+                                    .await
+                                    .expect("failed sending pong");
+                                continue;
+                            }
+                            Ok(msg) => {
+                                return Err(RecvError::UnexpectedMsgError(format!(
+                                    "Unexpected message received: {msg}"
+                                )))
+                            }
+                            Err(error) => return Err(RecvError::RecevingError(error.to_string())),
+                        }
+                    } else {
+                        return Err(RecvError::Disconnected);
+                    }
                 }
-                Err(error) => return Err(RecvError::RecevingError(error.to_string())),
             }
         }
-        Err(RecvError::Disconnected)
     }
 
     fn subscribe(&mut self) -> impl Stream<Item = Price> + '_ {
