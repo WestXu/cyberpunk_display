@@ -159,11 +159,11 @@ impl WsCoin {
                                     panic!("Error {} happened parsing json: {}", error, &msg)
                                 }
                             },
-                            Ok(Message::Ping(_)) => {
-                                socket
-                                    .send(Message::Pong(vec![]))
-                                    .await
-                                    .expect("failed sending pong");
+                            Ok(Message::Ping(data)) => {
+                                if let Err(e) = socket.send(Message::Pong(data)).await {
+                                    log::error!("Failed to send pong: {}", e);
+                                    return Err(RecvError::Disconnected);
+                                }
                                 continue;
                             }
                             Ok(msg) => {
