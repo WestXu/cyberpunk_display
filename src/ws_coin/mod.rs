@@ -131,10 +131,9 @@ impl WsCoin {
                     continue;
                 }
                 ConnectionState::Connected(socket) => {
-                    if let Some(msg) =
-                        tokio::time::timeout(Duration::from_millis(100), socket.next())
-                            .await
-                            .map_err(|_| RecvError::Timeout)?
+                    if let Some(msg) = tokio::time::timeout(Duration::from_secs(60), socket.next())
+                        .await
+                        .map_err(|_| RecvError::Timeout)?
                     {
                         match msg {
                             Ok(Message::Text(msg)) => match parse_json(&msg) {
