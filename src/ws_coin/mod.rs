@@ -24,6 +24,7 @@ pub struct Market {
 
 #[derive(Debug)]
 pub enum RecvError {
+    Timeout,
     RecevingError(String),
     UnexpectedMsgError(String),
     ParsingError(String),
@@ -35,6 +36,7 @@ impl Error for RecvError {}
 impl fmt::Display for RecvError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
+            RecvError::Timeout => write!(f, "Timeout"),
             RecvError::RecevingError(err_str) => write!(f, "{}", err_str),
             RecvError::UnexpectedMsgError(err_str) => write!(f, "{}", err_str),
             RecvError::ParsingError(err_str) => write!(f, "{}", err_str),
@@ -129,7 +131,11 @@ impl WsCoin {
                     continue;
                 }
                 ConnectionState::Connected(socket) => {
-                    if let Some(msg) = socket.next().await {
+                    if let Some(msg) =
+                        tokio::time::timeout(Duration::from_millis(100), socket.next())
+                            .await
+                            .map_err(|_| RecvError::Timeout)?
+                    {
                         match msg {
                             Ok(Message::Text(msg)) => match parse_json(&msg) {
                                 Ok(msg) => match msg {
