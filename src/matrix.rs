@@ -1,3 +1,5 @@
+use std::time::{Duration, Instant};
+
 use super::{
     price_queue::{PlotKind, PriceQueue},
     screen::{
@@ -98,6 +100,8 @@ pub struct BtcTimeMatrix {
     pq: PriceQueue,
     ws_coin: WsCoin,
     price: Option<Decimal>,
+    lastest_price_time: Instant,
+    indicator_lit: bool,
 }
 
 impl BtcTimeMatrix {
@@ -110,12 +114,15 @@ impl BtcTimeMatrix {
             pq: PriceQueue::default(),
             ws_coin: WsCoin::new(markets).await,
             price: None,
+            lastest_price_time: Instant::now(),
+            indicator_lit: false,
         }
     }
     pub async fn gen_screen(&mut self) -> Screen {
         tokio::select! {
             Some(price) = self.ws_coin.next() => {
                 self.price = Some(price.price);
+                self.lastest_price_time = Instant::now();
                 self.pq.push(price.price);
             },
             _ = tokio::time::sleep(std::time::Duration::from_millis(100)) => {}
@@ -145,6 +152,18 @@ impl BtcTimeMatrix {
             32usize.saturating_sub(minor_cs.pixels[0].len() + 1),
             5,
         );
+
+        {
+            // Add a "network activity" indicator at bottom-left corner
+            const FRESH: Duration = Duration::from_secs(1); // fresh if there's data within
+
+            let active = Instant::now().duration_since(self.lastest_price_time) <= FRESH;
+            self.indicator_lit = if active { !self.indicator_lit } else { false }; // active: toggle; inactive: off
+
+            if self.indicator_lit {
+                screen.draw(&[vec![Some(Rgb888::new(255, 255, 0))]], 0, 7);
+            }
+        }
 
         screen
     }
