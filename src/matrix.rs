@@ -1,5 +1,3 @@
-use std::time::{Duration, Instant};
-
 use super::{
     price_queue::{PlotKind, PriceQueue},
     screen::{
@@ -100,8 +98,7 @@ pub struct BtcTimeMatrix {
     pq: PriceQueue,
     ws_coin: WsCoin,
     price: Option<Decimal>,
-    lastest_price_time: Instant,
-    indicator_lit: bool,
+    indicator_lit: bool, // a "network activity" indicator at bottom-left corner
 }
 
 impl BtcTimeMatrix {
@@ -114,7 +111,6 @@ impl BtcTimeMatrix {
             pq: PriceQueue::default(),
             ws_coin: WsCoin::new(markets).await,
             price: None,
-            lastest_price_time: Instant::now(),
             indicator_lit: false,
         }
     }
@@ -122,10 +118,12 @@ impl BtcTimeMatrix {
         tokio::select! {
             Some(price) = self.ws_coin.next() => {
                 self.price = Some(price.price);
-                self.lastest_price_time = Instant::now();
+                self.indicator_lit = !self.indicator_lit; // toggle the indicator on new price
                 self.pq.push(price.price);
             },
-            _ = tokio::time::sleep(std::time::Duration::from_millis(100)) => {}
+            _ = tokio::time::sleep(std::time::Duration::from_millis(100)) => {
+                self.indicator_lit = false; // turn off the indicator after timeout
+            }
         }
 
         let mut screen = self.pq.to_screen(PlotKind::FlatLine, false);
@@ -153,16 +151,8 @@ impl BtcTimeMatrix {
             5,
         );
 
-        {
-            // Add a "network activity" indicator at bottom-left corner
-            const FRESH: Duration = Duration::from_secs(1); // fresh if there's data within
-
-            let active = Instant::now().duration_since(self.lastest_price_time) <= FRESH;
-            self.indicator_lit = if active { !self.indicator_lit } else { false }; // active: toggle; inactive: off
-
-            if self.indicator_lit {
-                screen.draw(&[vec![Some(Rgb888::new(255, 255, 0))]], 0, 7);
-            }
+        if self.indicator_lit {
+            screen.draw(&[vec![Some(Rgb888::new(255, 255, 0))]], 0, 7);
         }
 
         screen
