@@ -37,6 +37,9 @@ struct Awtrix {
     host: String,
     #[clap(long, default_value = "7000")]
     port: u16,
+    /// Minimum interval between updates (in milliseconds)
+    #[clap(long)]
+    min_interval: Option<u128>,
     /// Print matrix to terminal before sending to awtrix
     #[clap(long)]
     print: bool,
@@ -90,7 +93,9 @@ async fn main() {
             if a.time {
                 let mut matrix = BtcTimeMatrix::default().await;
                 loop {
-                    let screen = matrix.gen_screen().await;
+                    let Some(screen) = matrix.gen_screen().await else {
+                        continue;
+                    };
                     println!("\x1b[8A{}", screen);
                 }
             } else {
@@ -102,13 +107,15 @@ async fn main() {
             }
         }
         SubCommand::Awtrix(a) => {
-            let mut awtrix = awtrix::Awtrix::new(a.host, a.port);
+            let mut awtrix = awtrix::Awtrix::new(a.host, a.port, a.min_interval);
             println!("\n\n\n\n\n\n\n\n");
 
             if a.time {
                 let mut matrix = BtcTimeMatrix::default().await;
                 loop {
-                    let screen = matrix.gen_screen().await;
+                    let Some(screen) = matrix.gen_screen().await else {
+                        continue;
+                    };
                     if a.print {
                         println!("\x1b[8A{}", screen);
                     }

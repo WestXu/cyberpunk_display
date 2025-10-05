@@ -107,7 +107,7 @@ pub struct BtcTimeMatrix {
     pq: PriceQueue,
     ws_coin: WsCoin,
     price: Option<Decimal>,
-    last_blink: Instant,
+    last_generation: Instant,
     indicator_lit: bool, // a "network activity" indicator at bottom-left corner
 }
 
@@ -121,23 +121,25 @@ impl BtcTimeMatrix {
             pq: PriceQueue::default(),
             ws_coin: WsCoin::new(markets).await,
             price: None,
-            last_blink: Instant::now(),
+            last_generation: Instant::now(),
             indicator_lit: false,
         }
     }
-    pub async fn gen_screen(&mut self) -> Screen {
+    pub async fn gen_screen(&mut self) -> Option<Screen> {
         tokio::select! {
             Some(price) = self.ws_coin.next() => {
                 self.price = Some(price.price);
                 self.pq.push(price.price);
-                if self.last_blink.elapsed() > Duration::from_millis(100) { // don't blink too fast
-                    self.indicator_lit = !self.indicator_lit; // toggle the indicator on new price
-                    self.last_blink = Instant::now();
-                }
 
+                if self.last_generation.elapsed() < Duration::from_millis(100) {
+                    return None; // don't update too fast
+                }
+                self.last_generation = Instant::now();
+
+                self.indicator_lit = !self.indicator_lit; // toggle the indicator on new price
             },
             _ = wait_for_round_second() => {
-                self.indicator_lit = false; // turn off the indicator after timeout
+                self.indicator_lit = false; // turn off the indicator at each second
             }
         }
 
@@ -170,6 +172,6 @@ impl BtcTimeMatrix {
             screen.draw(&[vec![Some(Rgb888::new(255, 255, 0))]], 0, 7);
         }
 
-        screen
+        Some(screen)
     }
 }
