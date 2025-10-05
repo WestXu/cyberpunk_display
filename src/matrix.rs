@@ -1,3 +1,5 @@
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
+
 use super::{
     price_queue::{PlotKind, PriceQueue},
     screen::{
@@ -94,6 +96,13 @@ impl BtcEthMatrix {
     }
 }
 
+async fn wait_for_round_second() {
+    let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
+    let sub = now.subsec_nanos(); // 0..=999_999_999
+    let ns = 1_000_000_000 - sub as u64;
+    tokio::time::sleep(Duration::from_nanos(ns)).await;
+}
+
 pub struct BtcTimeMatrix {
     pq: PriceQueue,
     ws_coin: WsCoin,
@@ -121,7 +130,7 @@ impl BtcTimeMatrix {
                 self.indicator_lit = !self.indicator_lit; // toggle the indicator on new price
                 self.pq.push(price.price);
             },
-            _ = tokio::time::sleep(std::time::Duration::from_millis(100)) => {
+            _ = wait_for_round_second() => {
                 self.indicator_lit = false; // turn off the indicator after timeout
             }
         }
