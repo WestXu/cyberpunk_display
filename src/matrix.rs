@@ -1,4 +1,4 @@
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use super::{
     price_queue::{PlotKind, PriceQueue},
@@ -107,6 +107,7 @@ pub struct BtcTimeMatrix {
     pq: PriceQueue,
     ws_coin: WsCoin,
     price: Option<Decimal>,
+    last_blink: Instant,
     indicator_lit: bool, // a "network activity" indicator at bottom-left corner
 }
 
@@ -120,6 +121,7 @@ impl BtcTimeMatrix {
             pq: PriceQueue::default(),
             ws_coin: WsCoin::new(markets).await,
             price: None,
+            last_blink: Instant::now(),
             indicator_lit: false,
         }
     }
@@ -127,8 +129,12 @@ impl BtcTimeMatrix {
         tokio::select! {
             Some(price) = self.ws_coin.next() => {
                 self.price = Some(price.price);
-                self.indicator_lit = !self.indicator_lit; // toggle the indicator on new price
                 self.pq.push(price.price);
+                if self.last_blink.elapsed() > Duration::from_millis(100) { // don't blink too fast
+                    self.indicator_lit = !self.indicator_lit; // toggle the indicator on new price
+                    self.last_blink = Instant::now();
+                }
+
             },
             _ = wait_for_round_second() => {
                 self.indicator_lit = false; // turn off the indicator after timeout
