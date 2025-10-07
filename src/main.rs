@@ -50,8 +50,10 @@ struct Awtrix {
 #[cfg(feature = "nixie")]
 #[derive(Parser, Debug)]
 struct Nixie {
-    #[clap(long)]
+    #[clap(short, long, default_value = "/dev/ttyUSB0")]
     serial_port: String,
+    #[clap(short, long, default_value = "8")]
+    brightness: u8,
 }
 
 #[tokio::main]
@@ -138,7 +140,7 @@ async fn main() {
             use rust_decimal_macros::dec;
 
             let mut nixie = nixie::Nixie::new(n.serial_port);
-            nixie.set_brightness(8);
+            nixie.set_brightness(n.brightness);
             let mut ws_coin = WsCoin::default().await;
 
             let mut latest_bytes = dec!(999999).into();
