@@ -1,6 +1,6 @@
 use clap::Parser;
 use cyberpunk_display::awtrix;
-use cyberpunk_display::matrix::{BtcEthMatrix, BtcTimeMatrix};
+use cyberpunk_display::matrix::BtcTimeMatrix;
 #[cfg(feature = "nixie")]
 use cyberpunk_display::nixie;
 #[cfg(feature = "nixie")]
@@ -44,16 +44,10 @@ struct Opts {
 
 #[derive(Parser, Debug)]
 enum SubCommand {
-    Matrix(Matrix),
+    Matrix,
     Awtrix(Awtrix),
     #[cfg(feature = "nixie")]
     Nixie(Nixie),
-}
-
-#[derive(Parser, Debug)]
-struct Matrix {
-    #[clap(long)]
-    time: bool, // show time instead of eth price
 }
 
 #[derive(Parser, Debug)]
@@ -68,8 +62,6 @@ struct Awtrix {
     /// Print matrix to terminal before sending to awtrix
     #[clap(long)]
     print: bool,
-    #[clap(long)]
-    time: bool, // show time instead of eth price
 }
 
 #[cfg(feature = "nixie")]
@@ -115,47 +107,28 @@ async fn main() {
     log::info!("Starting application with {opts:?}");
 
     match opts.subcmd {
-        SubCommand::Matrix(a) => {
+        SubCommand::Matrix => {
             println!("\n\n\n\n\n\n\n\n");
-            if a.time {
-                let mut matrix = BtcTimeMatrix::default().await;
-                loop {
-                    let Some(screen) = matrix.next().await else {
-                        continue;
-                    };
-                    println!("\x1b[8A{}", screen);
-                }
-            } else {
-                let mut matrix = BtcEthMatrix::default().await;
-                loop {
-                    let screen = matrix.gen_screen().await;
-                    println!("\x1b[8A{}", screen);
-                }
+            let mut matrix = BtcTimeMatrix::default().await;
+            loop {
+                let Some(screen) = matrix.next().await else {
+                    continue;
+                };
+                println!("\x1b[8A{}", screen);
             }
         }
         SubCommand::Awtrix(a) => {
             let mut awtrix = awtrix::Awtrix::new(a.host, a.port, a.min_interval);
             println!("\n\n\n\n\n\n\n\n");
 
-            if a.time {
-                let mut matrix = BtcTimeMatrix::default().await;
-                loop {
-                    let screen = drain_stream_or_wait(&mut matrix).await.expect("closed");
-                    if a.print {
-                        println!("\x1b[8A{}", screen);
-                    }
-                    awtrix.plot(&screen.serialize()).await;
-                    tokio::time::sleep(Duration::from_millis(50)).await;
+            let mut matrix = BtcTimeMatrix::default().await;
+            loop {
+                let screen = drain_stream_or_wait(&mut matrix).await.expect("closed");
+                if a.print {
+                    println!("\x1b[8A{}", screen);
                 }
-            } else {
-                let mut matrix = BtcEthMatrix::default().await;
-                loop {
-                    let screen = (matrix.gen_screen()).await;
-                    if a.print {
-                        println!("\x1b[8A{}", screen);
-                    }
-                    awtrix.plot(&screen.serialize()).await;
-                }
+                awtrix.plot(&screen.serialize()).await;
+                tokio::time::sleep(Duration::from_millis(50)).await;
             }
         }
         #[cfg(feature = "nixie")]
