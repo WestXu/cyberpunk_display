@@ -134,12 +134,18 @@ async fn main() {
         }
         #[cfg(feature = "nixie")]
         SubCommand::Nixie(n) => {
+            use futures::StreamExt as _;
+            use rust_decimal_macros::dec;
+
             let mut nixie = nixie::Nixie::new(n.serial_port);
             nixie.set_brightness(8);
-            let ws_coin = WsCoin::default();
-            let mut lastest_price = 99999.9;
-            for price in ws_coin {
-                let p = *price.price.as_f32();
+            let mut ws_coin = WsCoin::default().await;
+            let mut lastest_price = dec!(999999);
+            loop {
+                let Some(price) = ws_coin.next().await else {
+                    continue;
+                };
+                let p = price.price;
                 if p != lastest_price {
                     lastest_price = p;
                 }

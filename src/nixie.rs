@@ -1,15 +1,15 @@
+use rust_decimal::prelude::*;
 use serialport::SerialPort;
 use std::io::Write;
-use std::thread::sleep;
 use std::time::Duration;
 
-fn float_to_bytes(num: f32) -> [u8; 16] {
+fn float_to_bytes(num: Decimal) -> [u8; 16] {
     let num_str = format!("{num:07.1}");
     let out_str = format!("{}{}{}", "TIMD", num_str.replace(".", ""), "BBBBBL");
     out_str
         .as_bytes()
         .try_into()
-        .expect(&format!("Failed to format num {num} to {out_str}"))
+        .unwrap_or_else(|_| panic!("Failed to format num {num} to {out_str}"))
 }
 
 pub struct Nixie {
@@ -25,22 +25,22 @@ impl Nixie {
                 .expect("Failed to open port"),
         }
     }
-    pub fn send(&mut self, p: f32) {
+    pub fn send(&mut self, p: Decimal) {
         self.ser
-            .write(&float_to_bytes(p))
-            .expect(&format!("failed to send {p}"));
+            .write_all(&float_to_bytes(p))
+            .unwrap_or_else(|_| panic!("failed to send {p}"));
         log::info!("Sent to Nixie {p}");
     }
     pub fn set_brightness(&mut self, b: u8) {
         assert!(b <= 8, "brightness should be between (0, 8)");
         self.ser
-            .write(format!("TIMB{b}").as_bytes())
-            .expect(&format!("failed to set brightness to {b}"));
+            .write_all(format!("TIMB{b}").as_bytes())
+            .unwrap_or_else(|_| panic!("failed to set brightness to {b}"));
         log::info!("Set Nixie brightness to {b}");
     }
     pub fn close(&mut self) {
         self.ser
-            .write("TIMDBBBBBBBBBBBB".as_bytes())
+            .write_all("TIMDBBBBBBBBBBBB".as_bytes())
             .expect("Failed to close");
         log::info!("Closed Nixie");
     }
@@ -48,7 +48,15 @@ impl Nixie {
 
 #[test]
 fn test_float_to_bytes() {
-    let fs = [100.2, 0.1513, 13568.0, 141.5116548165, 0.0000005186];
+    use rust_decimal_macros::dec;
+
+    let fs = [
+        dec!(100.2),
+        dec!(0.1513),
+        dec!(13568.0),
+        dec!(141.51165),
+        dec!(0.0000005186),
+    ];
     assert_eq!(
         fs.map(float_to_bytes),
         [
@@ -71,11 +79,14 @@ fn list_serial_port() {
 
 #[test]
 fn test_nixie() {
-    let mut nixie = Nixie::new("COM3".to_owned());
+    use rust_decimal_macros::dec;
+    use std::thread::sleep;
+
+    let mut nixie = Nixie::new("/dev/ttyUSB0".to_owned());
     nixie.set_brightness(8);
     (0..=9)
         .map(|p| {
-            nixie.send(p as f32 * 11111.1);
+            nixie.send(Decimal::from(p) * dec!(11111.1));
             sleep(Duration::from_millis(200));
         })
         .for_each(drop);

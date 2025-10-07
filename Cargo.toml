@@ -23,7 +23,7 @@ reqwest = { version = "0.12.4", features = [
     "rustls-tls-webpki-roots",
 ], default-features = false }
 clap = { version = "4.5.4", features = ["derive"] }
-serialport = { version = "4.2", optional = true }
+serialport = { version = "4.8", optional = true }
 chrono = "0.4.38"
 anyhow = "1.0.83"
 futures = "0.3.30"
