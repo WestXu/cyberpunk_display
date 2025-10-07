@@ -8,6 +8,11 @@ pub struct NixieMsg {
     num: Decimal,
     pub bytes: [u8; 16],
 }
+impl NixieMsg {
+    pub fn flip_first_decimal_point(&mut self) {
+        self.bytes[10] = if self.bytes[10] == b'B' { b'L' } else { b'B' }
+    }
+}
 
 impl From<Decimal> for NixieMsg {
     fn from(num: Decimal) -> Self {

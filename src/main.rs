@@ -137,7 +137,6 @@ async fn main() {
         #[cfg(feature = "nixie")]
         SubCommand::Nixie(n) => {
             use cyberpunk_display::nixie::NixieMsg;
-            use rust_decimal_macros::dec;
 
             pub async fn drain_stream_or_wait<T>(
                 stream: &mut (impl futures::Stream<Item = T> + Unpin),
@@ -169,7 +168,7 @@ async fn main() {
             nixie.set_brightness(n.brightness);
             let mut ws_coin = WsCoin::default().await;
 
-            let mut latest_msg: nixie::NixieMsg = dec!(999999).into();
+            let mut flip = false;
             loop {
                 let price = drain_stream_or_wait(&mut ws_coin)
                     .await
@@ -178,11 +177,12 @@ async fn main() {
                     .expect("No price received");
 
                 log::debug!("Received price: {price:?}");
-                let msg: NixieMsg = price.price.into();
-                if msg.bytes != latest_msg.bytes {
-                    latest_msg = msg;
-                    nixie.send(msg).await;
-                }
+                let mut msg: NixieMsg = price.price.into();
+                flip = !flip;
+                if flip {
+                    msg.flip_first_decimal_point()
+                };
+                nixie.send(msg).await;
             }
         }
     }
