@@ -140,27 +140,24 @@ async fn main() {
 
             pub async fn drain_stream_or_wait<T>(
                 stream: &mut (impl futures::Stream<Item = T> + Unpin),
-            ) -> Option<Vec<T>> {
+            ) -> Option<T> {
                 use futures::{FutureExt, StreamExt};
 
-                let mut items = vec![];
+                let mut item: Option<T> = None;
                 loop {
                     let Some(next) = stream.next().now_or_never() else {
                         // stream is drained
-                        if items.is_empty() {
+                        if item.is_none() {
                             // still empty, wait for next item
-                            return Some(vec![stream.next().await?]);
+                            return stream.next().await;
                         }
-                        return Some(items);
+                        return item;
                     };
                     let Some(next) = next else {
                         // stream is closed
-                        if items.is_empty() {
-                            return None;
-                        }
-                        return Some(items);
+                        return item;
                     };
-                    items.push(next);
+                    item = Some(next);
                 }
             }
 
@@ -172,9 +169,7 @@ async fn main() {
             loop {
                 let price = drain_stream_or_wait(&mut ws_coin)
                     .await
-                    .expect("WebSocket closed unexpectedly")
-                    .pop()
-                    .expect("No price received");
+                    .expect("WebSocket closed unexpectedly");
 
                 log::debug!("Received price: {price:?}");
                 let mut msg: NixieMsg = price.price.into();
