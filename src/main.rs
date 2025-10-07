@@ -137,8 +137,33 @@ async fn main() {
         #[cfg(feature = "nixie")]
         SubCommand::Nixie(n) => {
             use cyberpunk_display::nixie::NixieMsg;
-            use futures::StreamExt as _;
             use rust_decimal_macros::dec;
+
+            pub async fn drain_stream_or_wait<T>(
+                stream: &mut (impl futures::Stream<Item = T> + Unpin),
+            ) -> Option<Vec<T>> {
+                use futures::{FutureExt, StreamExt};
+
+                let mut items = vec![];
+                loop {
+                    let Some(next) = stream.next().now_or_never() else {
+                        // stream is drained
+                        if items.is_empty() {
+                            // still empty, wait for next item
+                            return Some(vec![stream.next().await?]);
+                        }
+                        return Some(items);
+                    };
+                    let Some(next) = next else {
+                        // stream is closed
+                        if items.is_empty() {
+                            return None;
+                        }
+                        return Some(items);
+                    };
+                    items.push(next);
+                }
+            }
 
             let mut nixie = nixie::Nixie::new(n.serial_port);
             nixie.set_brightness(n.brightness);
@@ -146,14 +171,17 @@ async fn main() {
 
             let mut latest_msg: nixie::NixieMsg = dec!(999999).into();
             loop {
-                let Some(price) = ws_coin.next().await else {
-                    continue;
-                };
+                let price = drain_stream_or_wait(&mut ws_coin)
+                    .await
+                    .expect("WebSocket closed unexpectedly")
+                    .pop()
+                    .expect("No price received");
+
                 log::debug!("Received price: {price:?}");
                 let msg: NixieMsg = price.price.into();
                 if msg.bytes != latest_msg.bytes {
                     latest_msg = msg;
-                    nixie.send(msg);
+                    nixie.send(msg).await;
                 }
             }
         }

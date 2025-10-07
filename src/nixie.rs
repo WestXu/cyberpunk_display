@@ -76,11 +76,12 @@ impl Nixie {
                 .expect("Failed to open port"),
         }
     }
-    pub fn send(&mut self, bytes: NixieMsg) {
+    pub async fn send(&mut self, bytes: NixieMsg) {
         if let Err(e) = self.ser.write_all(&bytes.bytes) {
             log::error!("Failed to send to Nixie: {}", e);
             return;
         }
+        tokio::time::sleep(Duration::from_millis(100)).await;
         log::info!("Sent to Nixie: {}", bytes.num);
     }
     pub fn set_brightness(&mut self, b: u8) {
@@ -118,19 +119,20 @@ fn list_serial_port() {
     }
 }
 
-#[test]
-fn test_nixie() {
+#[tokio::test]
+async fn test_nixie() {
     use rust_decimal_macros::dec;
     use std::thread::sleep;
 
     let mut nixie = Nixie::new("/dev/ttyUSB0".to_owned());
     nixie.set_brightness(8);
-    (0..=9)
-        .map(|p| {
-            nixie.send(decimal_to_bytes(Decimal::from(p) * dec!(11111.1)));
-            sleep(Duration::from_millis(200));
-        })
-        .for_each(drop);
+    for p in 0..=9 {
+        nixie
+            .send(decimal_to_bytes(Decimal::from(p) * dec!(11111.1)))
+            .await;
+        sleep(Duration::from_millis(200));
+    }
+
     (0..=8)
         .rev()
         .map(|b| {
