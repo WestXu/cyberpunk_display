@@ -136,6 +136,7 @@ async fn main() {
         }
         #[cfg(feature = "nixie")]
         SubCommand::Nixie(n) => {
+            use cyberpunk_display::nixie::NixieMsg;
             use futures::StreamExt as _;
             use rust_decimal_macros::dec;
 
@@ -143,16 +144,16 @@ async fn main() {
             nixie.set_brightness(n.brightness);
             let mut ws_coin = WsCoin::default().await;
 
-            let mut latest_bytes = dec!(999999).into();
+            let mut latest_msg: nixie::NixieMsg = dec!(999999).into();
             loop {
                 let Some(price) = ws_coin.next().await else {
                     continue;
                 };
-                log::info!("Received price: {:?}", price);
-                let bytes = price.price.into();
-                if bytes != latest_bytes {
-                    latest_bytes = bytes;
-                    nixie.send(bytes);
+                log::debug!("Received price: {price:?}");
+                let msg: NixieMsg = price.price.into();
+                if msg.bytes != latest_msg.bytes {
+                    latest_msg = msg;
+                    nixie.send(msg);
                 }
             }
         }

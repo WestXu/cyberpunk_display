@@ -3,10 +3,13 @@ use serialport::SerialPort;
 use std::io::Write;
 use std::time::Duration;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub struct NixieBytes([u8; 16]);
+#[derive(Debug, Clone, Copy)]
+pub struct NixieMsg {
+    num: Decimal,
+    pub bytes: [u8; 16],
+}
 
-impl From<Decimal> for NixieBytes {
+impl From<Decimal> for NixieMsg {
     fn from(num: Decimal) -> Self {
         let s = num.to_string();
         let parts: Vec<&str> = s.split('.').collect();
@@ -52,11 +55,11 @@ impl From<Decimal> for NixieBytes {
         result[0..4].copy_from_slice(b"TIMD");
         result[4..10].copy_from_slice(digits_str.as_bytes());
         result[10..16].copy_from_slice(&dots);
-        NixieBytes(result)
+        NixieMsg { num, bytes: result }
     }
 }
 
-pub fn decimal_to_bytes(num: Decimal) -> NixieBytes {
+pub fn decimal_to_bytes(num: Decimal) -> NixieMsg {
     num.into()
 }
 
@@ -73,12 +76,12 @@ impl Nixie {
                 .expect("Failed to open port"),
         }
     }
-    pub fn send(&mut self, bytes: NixieBytes) {
-        if let Err(e) = self.ser.write_all(&bytes.0) {
+    pub fn send(&mut self, bytes: NixieMsg) {
+        if let Err(e) = self.ser.write_all(&bytes.bytes) {
             log::error!("Failed to send to Nixie: {}", e);
             return;
         }
-        log::info!("Sent to Nixie: {:?}", String::from_utf8_lossy(&bytes.0));
+        log::info!("Sent to Nixie: {}", bytes.num);
     }
     pub fn set_brightness(&mut self, b: u8) {
         assert!(b <= 8, "brightness should be between (0, 8)");
@@ -99,12 +102,12 @@ impl Nixie {
 fn test_float_to_bytes() {
     use rust_decimal_macros::dec;
 
-    assert_eq!(NixieBytes::from(dec!(100.2)).0, *b"TIMD100200BBBLBB");
-    assert_eq!(NixieBytes::from(dec!(0.1513)).0, *b"TIMD151300LBBBBB");
-    assert_eq!(NixieBytes::from(dec!(13568.0)).0, *b"TIMD135680BBBBBL");
-    assert_eq!(NixieBytes::from(dec!(141.51165)).0, *b"TIMD141512BBBLBB");
-    assert_eq!(NixieBytes::from(dec!(94395.23)).0, *b"TIMD943952BBBBBL");
-    assert_eq!(NixieBytes::from(dec!(124395.52)).0, *b"TIMD124396BBBBBB");
+    assert_eq!(NixieMsg::from(dec!(100.2)).bytes, *b"TIMD100200BBBLBB");
+    assert_eq!(NixieMsg::from(dec!(0.1513)).bytes, *b"TIMD151300LBBBBB");
+    assert_eq!(NixieMsg::from(dec!(13568.0)).bytes, *b"TIMD135680BBBBBL");
+    assert_eq!(NixieMsg::from(dec!(141.51165)).bytes, *b"TIMD141512BBBLBB");
+    assert_eq!(NixieMsg::from(dec!(94395.23)).bytes, *b"TIMD943952BBBBBL");
+    assert_eq!(NixieMsg::from(dec!(124395.52)).bytes, *b"TIMD124396BBBBBB");
 }
 
 #[test]
