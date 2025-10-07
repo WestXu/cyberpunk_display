@@ -13,22 +13,34 @@ impl From<Decimal> for NixieBytes {
         let int_part = parts[0];
         let dec_part = if parts.len() > 1 { parts[1] } else { "" };
 
-        let (digits_str, has_decimal) = if int_part == "0" {
-            (format!("{:0<6}", dec_part), true)
+        let (digits_str, has_decimal, dot_pos) = if int_part == "0" {
+            let dec_str = format!("{:0<6}", dec_part);
+            (dec_str, true, 0)
         } else {
-            let combined = format!("{}{}", int_part, dec_part);
-            let mut truncated = combined;
-            truncated.truncate(6);
-            (
-                format!("{:0<6}", truncated),
-                truncated.len() > int_part.len() && !dec_part.is_empty(),
-            )
-        };
-
-        let dot_pos = if int_part == "0" {
-            0
-        } else {
-            int_part.len().min(5)
+            let int_len = int_part.len();
+            if int_len >= 6 {
+                let rounded = num.round_dp(0);
+                let rounded_str = rounded.to_string().split('.').next().unwrap().to_string();
+                let mut final_str = rounded_str;
+                final_str.truncate(6);
+                (format!("{:0<6}", final_str), false, int_len.min(5))
+            } else {
+                let needed_dec = 6 - int_len;
+                let rounded = num.round_dp(needed_dec as u32);
+                let rounded_str = rounded.to_string();
+                let rounded_parts: Vec<&str> = rounded_str.split('.').collect();
+                let rounded_dec = if rounded_parts.len() > 1 {
+                    rounded_parts[1]
+                } else {
+                    ""
+                };
+                let combined = format!("{}{}", rounded_parts[0], rounded_dec);
+                (
+                    format!("{:0<6}", combined),
+                    !rounded_dec.is_empty(),
+                    int_len,
+                )
+            }
         };
 
         let mut dots = [b'B'; 6];
@@ -90,9 +102,9 @@ fn test_float_to_bytes() {
     assert_eq!(NixieBytes::from(dec!(100.2)).0, *b"TIMD100200BBBLBB");
     assert_eq!(NixieBytes::from(dec!(0.1513)).0, *b"TIMD151300LBBBBB");
     assert_eq!(NixieBytes::from(dec!(13568.0)).0, *b"TIMD135680BBBBBL");
-    assert_eq!(NixieBytes::from(dec!(141.51165)).0, *b"TIMD141511BBBLBB");
+    assert_eq!(NixieBytes::from(dec!(141.51165)).0, *b"TIMD141512BBBLBB");
     assert_eq!(NixieBytes::from(dec!(94395.23)).0, *b"TIMD943952BBBBBL");
-    assert_eq!(NixieBytes::from(dec!(124395.52)).0, *b"TIMD124395BBBBBB");
+    assert_eq!(NixieBytes::from(dec!(124395.52)).0, *b"TIMD124396BBBBBB");
 }
 
 #[test]
