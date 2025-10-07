@@ -1,4 +1,4 @@
-use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use super::{
     price_queue::{PlotKind, PriceQueue},
@@ -9,7 +9,7 @@ use super::{
     },
     ws_coin::{Market, Price, WsCoin},
 };
-use futures::StreamExt as _;
+use futures::{Stream, StreamExt as _};
 use rust_decimal::prelude::*;
 
 pub struct BtcMatrix {
@@ -107,7 +107,6 @@ pub struct BtcTimeMatrix {
     pq: PriceQueue,
     ws_coin: WsCoin,
     price: Option<Decimal>,
-    last_generation: Instant,
     indicator_lit: bool, // a "network activity" indicator at bottom-left corner
 }
 
@@ -121,20 +120,14 @@ impl BtcTimeMatrix {
             pq: PriceQueue::default(),
             ws_coin: WsCoin::new(markets).await,
             price: None,
-            last_generation: Instant::now(),
             indicator_lit: false,
         }
     }
-    pub async fn gen_screen(&mut self) -> Option<Screen> {
+    pub async fn gen_screen(&mut self) -> Screen {
         tokio::select! {
             Some(price) = self.ws_coin.next() => {
                 self.price = Some(price.price);
                 self.pq.push(price.price);
-
-                if self.last_generation.elapsed() < Duration::from_millis(100) {
-                    return None; // don't update too fast
-                }
-                self.last_generation = Instant::now();
 
                 self.indicator_lit = !self.indicator_lit; // toggle the indicator on new price
             },
@@ -172,6 +165,27 @@ impl BtcTimeMatrix {
             screen.draw(&[vec![Some(Rgb888::new(255, 255, 0))]], 0, 7);
         }
 
-        Some(screen)
+        screen
+    }
+    fn subscribe(&mut self) -> impl Stream<Item = Screen> + '_ {
+        async_stream::stream! {
+            loop {
+                let screen = self.gen_screen().await;
+                yield screen;
+            }
+        }
+    }
+}
+
+impl Stream for BtcTimeMatrix {
+    type Item = Screen;
+
+    fn poll_next(
+        self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context,
+    ) -> std::task::Poll<Option<Self::Item>> {
+        let stream = self.get_mut().subscribe();
+        tokio::pin!(stream);
+        stream.poll_next(cx)
     }
 }

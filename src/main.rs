@@ -5,11 +5,36 @@ use cyberpunk_display::matrix::{BtcEthMatrix, BtcTimeMatrix};
 use cyberpunk_display::nixie;
 #[cfg(feature = "nixie")]
 use cyberpunk_display::ws_coin::WsCoin;
+use futures::StreamExt as _;
 use simplelog::{ColorChoice, CombinedLogger, LevelFilter, TermLogger, TerminalMode, WriteLogger};
+use std::time::Duration;
 use std::{
     fs::{create_dir_all, File},
     path::PathBuf,
 };
+
+async fn drain_stream_or_wait<T>(
+    stream: &mut (impl futures::Stream<Item = T> + Unpin),
+) -> Option<T> {
+    use futures::{FutureExt, StreamExt};
+
+    let mut item: Option<T> = None;
+    loop {
+        let Some(next) = stream.next().now_or_never() else {
+            // stream is drained
+            if item.is_none() {
+                // still empty, wait for next item
+                return stream.next().await;
+            }
+            return item;
+        };
+        let Some(next) = next else {
+            // stream is closed
+            return item;
+        };
+        item = Some(next);
+    }
+}
 
 #[derive(Parser, Debug)]
 struct Opts {
@@ -95,7 +120,7 @@ async fn main() {
             if a.time {
                 let mut matrix = BtcTimeMatrix::default().await;
                 loop {
-                    let Some(screen) = matrix.gen_screen().await else {
+                    let Some(screen) = matrix.next().await else {
                         continue;
                     };
                     println!("\x1b[8A{}", screen);
@@ -115,51 +140,27 @@ async fn main() {
             if a.time {
                 let mut matrix = BtcTimeMatrix::default().await;
                 loop {
-                    let Some(screen) = matrix.gen_screen().await else {
-                        continue;
-                    };
+                    let screen = drain_stream_or_wait(&mut matrix).await.expect("closed");
                     if a.print {
                         println!("\x1b[8A{}", screen);
                     }
-                    awtrix.plot(&screen.serialize()).await
+                    awtrix.plot(&screen.serialize()).await;
+                    tokio::time::sleep(Duration::from_millis(50)).await;
                 }
             } else {
                 let mut matrix = BtcEthMatrix::default().await;
                 loop {
-                    let screen = matrix.gen_screen().await;
+                    let screen = (matrix.gen_screen()).await;
                     if a.print {
                         println!("\x1b[8A{}", screen);
                     }
-                    awtrix.plot(&screen.serialize()).await
+                    awtrix.plot(&screen.serialize()).await;
                 }
             }
         }
         #[cfg(feature = "nixie")]
         SubCommand::Nixie(n) => {
             use cyberpunk_display::nixie::NixieMsg;
-
-            pub async fn drain_stream_or_wait<T>(
-                stream: &mut (impl futures::Stream<Item = T> + Unpin),
-            ) -> Option<T> {
-                use futures::{FutureExt, StreamExt};
-
-                let mut item: Option<T> = None;
-                loop {
-                    let Some(next) = stream.next().now_or_never() else {
-                        // stream is drained
-                        if item.is_none() {
-                            // still empty, wait for next item
-                            return stream.next().await;
-                        }
-                        return item;
-                    };
-                    let Some(next) = next else {
-                        // stream is closed
-                        return item;
-                    };
-                    item = Some(next);
-                }
-            }
 
             let mut nixie = nixie::Nixie::new(n.serial_port);
             nixie.set_brightness(n.brightness);
