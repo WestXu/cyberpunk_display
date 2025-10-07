@@ -28,7 +28,7 @@ pub fn parse_json(data: &str) -> Result<Msg, Box<dyn Error>> {
         Received::Subscribed { .. } => Msg::Subscribed,
         Received::Update { symbol, price } => Msg::Price {
             symbol,
-            price: price.parse()?,
+            price: price.parse::<Decimal>()?.normalize(),
         },
     })
 }
