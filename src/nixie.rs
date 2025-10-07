@@ -56,7 +56,7 @@ impl Nixie {
     pub fn new(serialport: String) -> Self {
         Nixie {
             ser: serialport::new(serialport, 9600)
-                .timeout(Duration::from_millis(10))
+                .timeout(Duration::from_millis(1000))
                 .open()
                 .expect("Failed to open port"),
         }
