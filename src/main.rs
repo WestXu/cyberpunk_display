@@ -140,16 +140,18 @@ async fn main() {
             let mut nixie = nixie::Nixie::new(n.serial_port);
             nixie.set_brightness(8);
             let mut ws_coin = WsCoin::default().await;
-            let mut lastest_price = dec!(999999);
+
+            let mut latest_bytes = dec!(999999).into();
             loop {
                 let Some(price) = ws_coin.next().await else {
                     continue;
                 };
-                let p = price.price;
-                if p != lastest_price {
-                    lastest_price = p;
+                log::info!("Received price: {:?}", price);
+                let bytes = price.price.into();
+                if bytes != latest_bytes {
+                    latest_bytes = bytes;
+                    nixie.send(bytes);
                 }
-                nixie.send(lastest_price)
             }
         }
     }
