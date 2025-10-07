@@ -3,13 +3,40 @@ use serialport::SerialPort;
 use std::io::Write;
 use std::time::Duration;
 
-fn float_to_bytes(num: Decimal) -> [u8; 16] {
-    let num_str = format!("{num:07.1}");
-    let out_str = format!("{}{}{}", "TIMD", num_str.replace(".", ""), "BBBBBL");
-    out_str
-        .as_bytes()
-        .try_into()
-        .unwrap_or_else(|_| panic!("Failed to format num {num} to {out_str}"))
+fn decimal_to_bytes(num: Decimal) -> [u8; 16] {
+    let s = num.to_string();
+    let parts: Vec<&str> = s.split('.').collect();
+    let int_part = parts[0];
+    let dec_part = if parts.len() > 1 { parts[1] } else { "" };
+
+    let (digits_str, has_decimal) = if int_part == "0" {
+        (format!("{:0<6}", dec_part), true)
+    } else {
+        let combined = format!("{}{}", int_part, dec_part);
+        let mut truncated = combined;
+        truncated.truncate(6);
+        (
+            format!("{:0<6}", truncated),
+            truncated.len() > int_part.len() && !dec_part.is_empty(),
+        )
+    };
+
+    let dot_pos = if int_part == "0" {
+        0
+    } else {
+        int_part.len().min(5)
+    };
+
+    let mut dots = [b'B'; 6];
+    if has_decimal && dot_pos < 6 {
+        dots[dot_pos] = b'L';
+    }
+
+    let mut result = [0u8; 16];
+    result[0..4].copy_from_slice(b"TIMD");
+    result[4..10].copy_from_slice(digits_str.as_bytes());
+    result[10..16].copy_from_slice(&dots);
+    result
 }
 
 pub struct Nixie {
@@ -27,7 +54,7 @@ impl Nixie {
     }
     pub fn send(&mut self, p: Decimal) {
         self.ser
-            .write_all(&float_to_bytes(p))
+            .write_all(&decimal_to_bytes(p))
             .unwrap_or_else(|_| panic!("failed to send {p}"));
         log::info!("Sent to Nixie {p}");
     }
@@ -50,23 +77,12 @@ impl Nixie {
 fn test_float_to_bytes() {
     use rust_decimal_macros::dec;
 
-    let fs = [
-        dec!(100.2),
-        dec!(0.1513),
-        dec!(13568.0),
-        dec!(141.51165),
-        dec!(0.0000005186),
-    ];
-    assert_eq!(
-        fs.map(float_to_bytes),
-        [
-            "TIMD001002BBBBBL".as_bytes(),
-            "TIMD000002BBBBBL".as_bytes(),
-            "TIMD135680BBBBBL".as_bytes(),
-            "TIMD001415BBBBBL".as_bytes(),
-            "TIMD000000BBBBBL".as_bytes(),
-        ]
-    );
+    assert_eq!(decimal_to_bytes(dec!(100.2)), *b"TIMD100200BBBLBB");
+    assert_eq!(decimal_to_bytes(dec!(0.1513)), *b"TIMD151300LBBBBB");
+    assert_eq!(decimal_to_bytes(dec!(13568.0)), *b"TIMD135680BBBBBL");
+    assert_eq!(decimal_to_bytes(dec!(141.51165)), *b"TIMD141511BBBLBB");
+    assert_eq!(decimal_to_bytes(dec!(94395.23)), *b"TIMD943952BBBBBL");
+    assert_eq!(decimal_to_bytes(dec!(124395.52)), *b"TIMD124395BBBBBB");
 }
 
 #[test]
