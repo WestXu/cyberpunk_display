@@ -76,7 +76,7 @@ impl Nixie {
     pub fn new(serialport: String) -> Self {
         Nixie {
             ser: serialport::new(serialport, 9600)
-                .timeout(Duration::from_millis(1000))
+                .timeout(Duration::from_millis(100))
                 .open()
                 .expect("Failed to open port"),
         }
@@ -86,7 +86,7 @@ impl Nixie {
             log::error!("Failed to send to Nixie: {}", e);
             return;
         }
-        tokio::time::sleep(Duration::from_millis(100)).await;
+        tokio::time::sleep(Duration::from_millis(50)).await;
         log::info!("Sent to Nixie: {}", bytes.num);
     }
     pub fn set_brightness(&mut self, b: u8) {
