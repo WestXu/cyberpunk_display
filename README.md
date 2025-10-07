@@ -25,9 +25,3 @@ Show Bitcoin(crypto) prices using [Nixie tube](https://en.wikipedia.org/wiki/Nix
 https://user-images.githubusercontent.com/25974092/185595353-fcde4146-103b-4b02-9370-6fa9b75f7d07.mp4
 
 ![Awtrix](awtrix.gif)
-
-### vfd
-
-`cyberpunk_display vfd`
-
-![VFD](vfd.gif)
