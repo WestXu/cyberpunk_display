@@ -131,7 +131,7 @@ impl WsCoin {
                 ConnectionState::Reconnecting => {
                     log::debug!("recv_price: Connection is reconnecting, waiting...");
                     drop(connection);
-                    tokio::time::sleep(Duration::from_millis(100)).await;
+                    tokio::time::sleep(Duration::from_millis(1000)).await;
                     continue;
                 }
                 ConnectionState::Connected(socket) => {
