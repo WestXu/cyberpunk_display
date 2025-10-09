@@ -68,7 +68,7 @@ impl WsCoin {
 
 async fn connect(markets: &[Market]) -> anyhow::Result<PriceSocket> {
     log::info!("Connecting to Binance WebSocket...");
-    let url = Url::parse("wss://data-stream.binance.com/ws/test")?;
+    let url = Url::parse("wss://stream.binance.com/ws")?;
     let (mut socket, _) = connect_async(url).await?;
     log::info!("Connected to Binance WebSocket");
 
