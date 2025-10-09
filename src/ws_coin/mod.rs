@@ -78,7 +78,9 @@ async fn connect(markets: &[Market]) -> anyhow::Result<PriceSocket> {
         "id": 1
     })
     .to_string();
+    log::debug!("Sending subscription message: {}", msg);
     socket.send(Message::Text(msg)).await?;
+    log::debug!("Subscription message sent successfully");
     Ok(socket)
 }
 
@@ -109,6 +111,7 @@ impl WsCoin {
         loop {
             match connect(&self.markets).await {
                 Ok(new_socket) => {
+                    log::debug!("reconnect: Successfully connected, updating connection state");
                     *self.connection.lock().await =
                         ConnectionState::Connected(Box::new(new_socket));
                     break;
@@ -126,6 +129,7 @@ impl WsCoin {
             let mut connection = self.connection.lock().await;
             match &mut *connection {
                 ConnectionState::Reconnecting => {
+                    log::debug!("recv_price: Connection is reconnecting, waiting...");
                     drop(connection);
                     tokio::time::sleep(Duration::from_millis(100)).await;
                     continue;
