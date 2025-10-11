@@ -3,8 +3,8 @@ pub mod parse_json;
 use futures::{SinkExt, Stream, StreamExt};
 use parse_json::{parse_json, Msg};
 use rust_decimal::prelude::*;
-use std::{error::Error, fmt, sync::Arc, time::Duration};
-use tokio::{net::TcpStream, sync::Mutex};
+use std::{error::Error, fmt, time::Duration};
+use tokio::net::TcpStream;
 use tokio_tungstenite::{connect_async, tungstenite::Message, MaybeTlsStream, WebSocketStream};
 use url::Url;
 
@@ -45,22 +45,14 @@ impl fmt::Display for RecvError {
     }
 }
 
-enum ConnectionState {
-    Connected(Box<PriceSocket>),
-    Reconnecting,
-}
-
-#[derive(Clone)]
 pub struct WsCoin {
     markets: Vec<Market>,
-    connection: Arc<Mutex<ConnectionState>>,
+    socket: PriceSocket,
 }
 impl WsCoin {
     pub async fn new(markets: Vec<Market>) -> Self {
         WsCoin {
-            connection: Arc::new(Mutex::new(ConnectionState::Connected(Box::new(
-                connect(&markets).await.unwrap(),
-            )))),
+            socket: connect(&markets).await.unwrap(),
             markets,
         }
     }
@@ -93,17 +85,7 @@ impl WsCoin {
         Self::new(markets).await
     }
 
-    async fn reconnect(&self) {
-        {
-            let mut connection = self.connection.lock().await;
-
-            if matches!(*connection, ConnectionState::Reconnecting) {
-                return;
-            }
-
-            *connection = ConnectionState::Reconnecting;
-        }
-
+    async fn reconnect(&mut self) {
         log::info!("Reconnect in 60s...");
         tokio::time::sleep(Duration::from_secs(60)).await;
         log::info!("Reconnecting...");
@@ -111,81 +93,66 @@ impl WsCoin {
         loop {
             match connect(&self.markets).await {
                 Ok(new_socket) => {
-                    log::debug!("reconnect: Successfully connected, updating connection state");
-                    *self.connection.lock().await =
-                        ConnectionState::Connected(Box::new(new_socket));
+                    self.socket = new_socket;
+                    log::info!("Reconnected. \n\n\n\n\n\n\n\n");
                     break;
                 }
                 Err(error) => {
                     log::info!("error happened during connection: {error}, retrying...");
+                    tokio::time::sleep(Duration::from_secs(60)).await;
                 }
             }
         }
-        log::info!("Reconnected. \n\n\n\n\n\n\n\n");
     }
 
     async fn recv_price(&mut self) -> Result<Price, RecvError> {
         loop {
-            let mut connection = self.connection.lock().await;
-            match &mut *connection {
-                ConnectionState::Reconnecting => {
-                    log::debug!("recv_price: Connection is reconnecting, waiting...");
-                    drop(connection);
-                    tokio::time::sleep(Duration::from_millis(1000)).await;
-                    continue;
-                }
-                ConnectionState::Connected(socket) => {
-                    if let Some(msg) = tokio::time::timeout(Duration::from_secs(60), socket.next())
-                        .await
-                        .map_err(|_| RecvError::Timeout)?
-                    {
-                        match msg {
-                            Ok(Message::Text(msg)) => match parse_json(&msg) {
-                                Ok(msg) => match msg {
-                                    Msg::Subscribed => continue,
-                                    Msg::Price { symbol, price: p } => {
-                                        return Ok(Price {
-                                            name: {
-                                                let mut name = None;
-                                                for market in &self.markets {
-                                                    if market.symbol == symbol {
-                                                        name = Some(market.name.clone());
-                                                        break;
-                                                    }
-                                                }
-                                                name.unwrap_or_else(|| {
-                                                    panic!(
-                                                        "market name not found for symbol {}",
-                                                        symbol
-                                                    )
-                                                })
-                                            },
-                                            price: p,
-                                        })
+            let Some(msg) = tokio::time::timeout(Duration::from_secs(60), self.socket.next())
+                .await
+                .map_err(|_| RecvError::Timeout)?
+            else {
+                return Err(RecvError::Disconnected);
+            };
+
+            match msg {
+                Ok(Message::Text(msg)) => match parse_json(&msg) {
+                    Ok(msg) => match msg {
+                        Msg::Subscribed => log::info!("Subscribed confirmed"),
+                        Msg::Price { symbol, price: p } => {
+                            return Ok(Price {
+                                name: {
+                                    let mut name = None;
+                                    for market in &self.markets {
+                                        if market.symbol == symbol {
+                                            name = Some(market.name.clone());
+                                            break;
+                                        }
                                     }
+                                    name.unwrap_or_else(|| {
+                                        panic!("market name not found for symbol {}", symbol)
+                                    })
                                 },
-                                Err(error) => {
-                                    panic!("Error {} happened parsing json: {}", error, &msg)
-                                }
-                            },
-                            Ok(Message::Ping(data)) => {
-                                if let Err(e) = socket.send(Message::Pong(data)).await {
-                                    log::error!("Failed to send pong: {}", e);
-                                    return Err(RecvError::Disconnected);
-                                }
-                                continue;
-                            }
-                            Ok(msg) => {
-                                return Err(RecvError::UnexpectedMsgError(format!(
-                                    "Unexpected message received: {msg}"
-                                )))
-                            }
-                            Err(error) => return Err(RecvError::RecevingError(error.to_string())),
+                                price: p,
+                            })
                         }
-                    } else {
+                    },
+                    Err(error) => {
+                        panic!("Error {} happened parsing json: {}", error, &msg)
+                    }
+                },
+                Ok(Message::Ping(data)) => {
+                    if let Err(e) = self.socket.send(Message::Pong(data)).await {
+                        log::error!("Failed to send pong: {}", e);
                         return Err(RecvError::Disconnected);
                     }
+                    continue;
                 }
+                Ok(msg) => {
+                    return Err(RecvError::UnexpectedMsgError(format!(
+                        "Unexpected message received: {msg}"
+                    )))
+                }
+                Err(error) => return Err(RecvError::RecevingError(error.to_string())),
             }
         }
     }
@@ -202,8 +169,7 @@ impl WsCoin {
                                 log::error!("Error happened: {}\n\n\n\n\n\n\n\n", error);
                             }
                         }
-                        let _self = self.clone();
-                        tokio::spawn(async move { _self.reconnect().await });
+                        self.reconnect().await;
                     }
                 }
             }
