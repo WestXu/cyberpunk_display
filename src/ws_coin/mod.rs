@@ -157,7 +157,7 @@ impl WsCoin {
         }
     }
 
-    fn subscribe(&mut self) -> impl Stream<Item = Price> + '_ {
+    pub fn subscribe(&mut self) -> impl Stream<Item = Price> + '_ {
         async_stream::stream! {
             loop {
                 match self.recv_price().await {
@@ -174,18 +174,5 @@ impl WsCoin {
                 }
             }
         }
-    }
-}
-
-impl Stream for WsCoin {
-    type Item = Price;
-
-    fn poll_next(
-        self: std::pin::Pin<&mut Self>,
-        cx: &mut std::task::Context,
-    ) -> std::task::Poll<Option<Self::Item>> {
-        let stream = self.get_mut().subscribe();
-        tokio::pin!(stream);
-        stream.poll_next(cx)
     }
 }

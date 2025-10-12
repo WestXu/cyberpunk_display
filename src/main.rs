@@ -110,6 +110,8 @@ async fn main() {
         SubCommand::Matrix => {
             println!("\n\n\n\n\n\n\n\n");
             let mut matrix = BtcTimeMatrix::default().await;
+            let matrix = matrix.subscribe();
+            tokio::pin!(matrix);
             loop {
                 let Some(screen) = matrix.next().await else {
                     continue;
@@ -122,6 +124,8 @@ async fn main() {
             println!("\n\n\n\n\n\n\n\n");
 
             let mut matrix = BtcTimeMatrix::default().await;
+            let matrix = matrix.subscribe();
+            tokio::pin!(matrix);
             loop {
                 let screen = drain_stream_or_wait(&mut matrix).await.expect("closed");
                 if a.print {
@@ -138,6 +142,8 @@ async fn main() {
             let mut nixie = nixie::Nixie::new(n.serial_port);
             nixie.set_brightness(n.brightness);
             let mut ws_coin = WsCoin::default().await;
+            let ws_coin = ws_coin.subscribe();
+            tokio::pin!(ws_coin);
 
             let mut flip = false;
             loop {

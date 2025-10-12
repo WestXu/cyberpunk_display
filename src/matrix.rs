@@ -25,7 +25,9 @@ impl BtcMatrix {
         }
     }
     pub async fn gen_screen(&mut self) -> Screen {
-        let price: Price = self.ws_coin.next().await.unwrap();
+        let ws_coin = self.ws_coin.subscribe();
+        tokio::pin!(ws_coin);
+        let price: Price = ws_coin.next().await.unwrap();
         self.pq.push(price.price);
         self.pq.to_screen(PlotKind::FlatLine, false)
     }
@@ -59,8 +61,10 @@ impl BtcTimeMatrix {
         }
     }
     pub async fn gen_screen(&mut self) -> Screen {
+        let ws_coin = self.ws_coin.subscribe();
+        tokio::pin!(ws_coin);
         tokio::select! {
-            Some(price) = self.ws_coin.next() => {
+            Some(price) = ws_coin.next() => {
                 self.price = Some(price.price);
                 self.pq.push(price.price);
 
@@ -102,25 +106,12 @@ impl BtcTimeMatrix {
 
         screen
     }
-    fn subscribe(&mut self) -> impl Stream<Item = Screen> + '_ {
+    pub fn subscribe(&mut self) -> impl Stream<Item = Screen> + '_ {
         async_stream::stream! {
             loop {
                 let screen = self.gen_screen().await;
                 yield screen;
             }
         }
-    }
-}
-
-impl Stream for BtcTimeMatrix {
-    type Item = Screen;
-
-    fn poll_next(
-        self: std::pin::Pin<&mut Self>,
-        cx: &mut std::task::Context,
-    ) -> std::task::Poll<Option<Self::Item>> {
-        let stream = self.get_mut().subscribe();
-        tokio::pin!(stream);
-        stream.poll_next(cx)
     }
 }
