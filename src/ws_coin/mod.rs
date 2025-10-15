@@ -46,14 +46,61 @@ impl fmt::Display for RecvError {
 }
 
 pub struct WsCoin {
-    markets: Vec<Market>,
-    socket: PriceSocket,
+    rx: tokio::sync::mpsc::UnboundedReceiver<Price>,
 }
 impl WsCoin {
     pub async fn new(markets: Vec<Market>) -> Self {
-        WsCoin {
-            socket: connect(&markets).await.unwrap(),
-            markets,
+        let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
+
+        tokio::spawn(async move {
+            loop {
+                let mut socket = match connect(&markets).await {
+                    Ok(s) => s,
+                    Err(e) => {
+                        log::error!("Connection failed: {e}, retrying in 60s...");
+                        tokio::time::sleep(Duration::from_secs(60)).await;
+                        continue;
+                    }
+                };
+
+                loop {
+                    match recv_price(&mut socket, &markets).await {
+                        Ok(price) => {
+                            if tx.send(price).is_err() {
+                                log::info!("Receiver dropped, exiting background task");
+                                return;
+                            }
+                        }
+                        Err(error) => {
+                            log::error!(
+                                "Error happened: {error}, Reconnect in 60s...\n\n\n\n\n\n\n\n",
+                            );
+                            tokio::time::sleep(Duration::from_secs(60)).await;
+                            break;
+                        }
+                    }
+                }
+            }
+        });
+
+        WsCoin { rx }
+    }
+}
+
+impl WsCoin {
+    pub async fn default() -> Self {
+        let markets = vec![Market {
+            symbol: "BTCUSDT".to_string(),
+            name: "BTC".to_string(),
+        }];
+        Self::new(markets).await
+    }
+
+    pub fn subscribe(&mut self) -> impl Stream<Item = Price> + '_ {
+        async_stream::stream! {
+            while let Some(price) = self.rx.recv().await {
+                yield price;
+            }
         }
     }
 }
@@ -76,103 +123,54 @@ async fn connect(markets: &[Market]) -> anyhow::Result<PriceSocket> {
     Ok(socket)
 }
 
-impl WsCoin {
-    pub async fn default() -> Self {
-        let markets = vec![Market {
-            symbol: "BTCUSDT".to_string(),
-            name: "BTC".to_string(),
-        }];
-        Self::new(markets).await
-    }
+async fn recv_price(socket: &mut PriceSocket, markets: &[Market]) -> Result<Price, RecvError> {
+    loop {
+        let Some(msg) = tokio::time::timeout(Duration::from_secs(60), socket.next())
+            .await
+            .map_err(|_| RecvError::Timeout)?
+        else {
+            return Err(RecvError::Disconnected);
+        };
 
-    async fn reconnect(&mut self) {
-        log::info!("Reconnect in 60s...");
-        tokio::time::sleep(Duration::from_secs(60)).await;
-        log::info!("Reconnecting...");
-
-        loop {
-            match connect(&self.markets).await {
-                Ok(new_socket) => {
-                    self.socket = new_socket;
-                    log::info!("Reconnected. \n\n\n\n\n\n\n\n");
-                    break;
-                }
-                Err(error) => {
-                    log::info!("error happened during connection: {error}, retrying...");
-                    tokio::time::sleep(Duration::from_secs(60)).await;
-                }
-            }
-        }
-    }
-
-    async fn recv_price(&mut self) -> Result<Price, RecvError> {
-        loop {
-            let Some(msg) = tokio::time::timeout(Duration::from_secs(60), self.socket.next())
-                .await
-                .map_err(|_| RecvError::Timeout)?
-            else {
-                return Err(RecvError::Disconnected);
-            };
-
-            match msg {
-                Ok(Message::Text(msg)) => match parse_json(&msg) {
-                    Ok(msg) => match msg {
-                        Msg::Subscribed => log::info!("Subscribed confirmed"),
-                        Msg::Price { symbol, price: p } => {
-                            return Ok(Price {
-                                name: {
-                                    let mut name = None;
-                                    for market in &self.markets {
-                                        if market.symbol == symbol {
-                                            name = Some(market.name.clone());
-                                            break;
-                                        }
+        match msg {
+            Ok(Message::Text(msg)) => match parse_json(&msg) {
+                Ok(msg) => match msg {
+                    Msg::Subscribed => log::info!("Subscribed confirmed"),
+                    Msg::Price { symbol, price: p } => {
+                        return Ok(Price {
+                            name: {
+                                let mut name = None;
+                                for market in markets {
+                                    if market.symbol == symbol {
+                                        name = Some(market.name.clone());
+                                        break;
                                     }
-                                    name.unwrap_or_else(|| {
-                                        panic!("market name not found for symbol {}", symbol)
-                                    })
-                                },
-                                price: p,
-                            })
-                        }
-                    },
-                    Err(error) => {
-                        panic!("Error {} happened parsing json: {}", error, &msg)
+                                }
+                                name.unwrap_or_else(|| {
+                                    panic!("market name not found for symbol {}", symbol)
+                                })
+                            },
+                            price: p,
+                        })
                     }
                 },
-                Ok(Message::Ping(data)) => {
-                    if let Err(e) = self.socket.send(Message::Pong(data)).await {
-                        log::error!("Failed to send pong: {}", e);
-                        return Err(RecvError::Disconnected);
-                    }
-                    continue;
+                Err(error) => {
+                    panic!("Error {} happened parsing json: {}", error, &msg)
                 }
-                Ok(msg) => {
-                    return Err(RecvError::UnexpectedMsgError(format!(
-                        "Unexpected message received: {msg}"
-                    )))
+            },
+            Ok(Message::Ping(data)) => {
+                if let Err(e) = socket.send(Message::Pong(data)).await {
+                    log::error!("Failed to send pong: {}", e);
+                    return Err(RecvError::Disconnected);
                 }
-                Err(error) => return Err(RecvError::RecevingError(error.to_string())),
+                continue;
             }
-        }
-    }
-
-    pub fn subscribe(&mut self) -> impl Stream<Item = Price> + '_ {
-        async_stream::stream! {
-            loop {
-                match self.recv_price().await {
-                    Ok(price) => yield price,
-                    Err(error) => {
-                        match error {
-                            RecvError::Disconnected => (),
-                            _ => {
-                                log::error!("Error happened: {}\n\n\n\n\n\n\n\n", error);
-                            }
-                        }
-                        self.reconnect().await;
-                    }
-                }
+            Ok(msg) => {
+                return Err(RecvError::UnexpectedMsgError(format!(
+                    "Unexpected message received: {msg}"
+                )))
             }
+            Err(error) => return Err(RecvError::RecevingError(error.to_string())),
         }
     }
 }
