@@ -42,7 +42,8 @@ impl From<Decimal> for NixieMsg {
                 } else {
                     ""
                 };
-                let combined = format!("{}{}", rounded_parts[0], rounded_dec);
+                let mut combined = format!("{}{}", rounded_parts[0], rounded_dec);
+                combined.truncate(6);
                 (
                     format!("{:0<6}", combined),
                     !rounded_dec.is_empty(),
@@ -114,6 +115,9 @@ fn test_float_to_bytes() {
     assert_eq!(NixieMsg::from(dec!(141.51165)).bytes, *b"TIMD141512BBBLBB");
     assert_eq!(NixieMsg::from(dec!(94395.23)).bytes, *b"TIMD943952BBBBBL");
     assert_eq!(NixieMsg::from(dec!(124395.52)).bytes, *b"TIMD124396BBBBBB");
+    assert_eq!(NixieMsg::from(dec!(99999.73)).bytes, *b"TIMD999997BBBBBL");
+    assert_eq!(NixieMsg::from(dec!(100000)).bytes, *b"TIMD100000BBBBBB");
+    assert_eq!(NixieMsg::from(dec!(999999.5)).bytes, *b"TIMD100000BBBBBB");
 }
 
 #[test]
