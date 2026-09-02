@@ -161,7 +161,10 @@ async fn main() {
                 if flip {
                     msg.flip_first_decimal_point()
                 };
-                nixie.send(msg).await;
+                if let Err(e) = nixie.send(msg).await {
+                    log::error!("Failed to send to Nixie, exiting: {e}");
+                    break;
+                }
             }
         }
     }
