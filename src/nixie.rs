@@ -15,59 +15,32 @@ impl NixieMsg {
     }
 }
 
+const TUBES: u32 = 6;
+const MAX_SHOWN: u64 = 999_999;
+
 impl From<Decimal> for NixieMsg {
     fn from(num: Decimal) -> Self {
-        let s = num.to_string();
-        let parts: Vec<&str> = s.split('.').collect();
-        let int_part = parts[0];
-        let dec_part = if parts.len() > 1 { parts[1] } else { "" };
-
-        let (digits_str, has_decimal, dot_pos) = if int_part == "0" {
-            let dec_str = format!("{:0<6}", dec_part);
-            (dec_str, true, 0)
-        } else {
-            let int_len = int_part.len();
-            if int_len >= 6 {
-                let rounded = num.round_dp(0);
-                let rounded_str = rounded.to_string().split('.').next().unwrap().to_string();
-                let mut final_str = rounded_str;
-                final_str.truncate(6);
-                (format!("{:0<6}", final_str), false, int_len.min(5))
-            } else {
-                let needed_dec = 6 - int_len;
-                let rounded = num.round_dp(needed_dec as u32);
-                let rounded_str = rounded.to_string();
-                let rounded_parts: Vec<&str> = rounded_str.split('.').collect();
-                let rounded_dec = if rounded_parts.len() > 1 {
-                    rounded_parts[1]
-                } else {
-                    ""
-                };
-                let mut combined = format!("{}{}", rounded_parts[0], rounded_dec);
-                combined.truncate(6);
-                (
-                    format!("{:0<6}", combined),
-                    !rounded_dec.is_empty(),
-                    int_len,
-                )
+        // Spend the tubes on decimals first, giving one back to the integer part
+        // whenever the rounded value doesn't fit, so a carry can't shift the dot.
+        let mut decimals = TUBES;
+        let digits = loop {
+            let scaled = num
+                .checked_mul(Decimal::from(10u64.pow(decimals)))
+                .and_then(|n| n.round().to_u64());
+            match scaled {
+                Some(d) if d <= MAX_SHOWN => break d,
+                _ if decimals == 0 => break MAX_SHOWN,
+                _ => decimals -= 1,
             }
         };
 
-        let mut dots = [b'B'; 6];
-        if has_decimal && dot_pos < 6 {
-            dots[dot_pos] = b'L';
+        let mut bytes = *b"TIMD000000BBBBBB";
+        bytes[4..10].copy_from_slice(format!("{digits:06}").as_bytes());
+        if decimals > 0 {
+            bytes[10 + (TUBES - decimals) as usize] = b'L';
         }
-
-        let mut result = [0u8; 16];
-        result[0..4].copy_from_slice(b"TIMD");
-        result[4..10].copy_from_slice(digits_str.as_bytes());
-        result[10..16].copy_from_slice(&dots);
-        NixieMsg { num, bytes: result }
+        NixieMsg { num, bytes }
     }
-}
-
-pub fn decimal_to_bytes(num: Decimal) -> NixieMsg {
-    num.into()
 }
 
 /// The CH340 USB-to-serial bridge the Nixie tube is wired behind.
@@ -144,7 +117,11 @@ fn test_float_to_bytes() {
     assert_eq!(NixieMsg::from(dec!(124395.52)).bytes, *b"TIMD124396BBBBBB");
     assert_eq!(NixieMsg::from(dec!(99999.73)).bytes, *b"TIMD999997BBBBBL");
     assert_eq!(NixieMsg::from(dec!(100000)).bytes, *b"TIMD100000BBBBBB");
-    assert_eq!(NixieMsg::from(dec!(999999.5)).bytes, *b"TIMD100000BBBBBB");
+    assert_eq!(NixieMsg::from(dec!(999999.5)).bytes, *b"TIMD999999BBBBBB");
+    assert_eq!(NixieMsg::from(dec!(99999.96)).bytes, *b"TIMD100000BBBBBB");
+    assert_eq!(NixieMsg::from(dec!(9.999999)).bytes, *b"TIMD100000BBLBBB");
+    assert_eq!(NixieMsg::from(dec!(0.0001513)).bytes, *b"TIMD000151LBBBBB");
+    assert_eq!(NixieMsg::from(dec!(12345678)).bytes, *b"TIMD999999BBBBBB");
 }
 
 #[tokio::test]
@@ -156,7 +133,7 @@ async fn test_nixie() {
     nixie.set_brightness(8);
     for p in 0..=9 {
         nixie
-            .send(decimal_to_bytes(Decimal::from(p) * dec!(11111.1)))
+            .send((Decimal::from(p) * dec!(11111.1)).into())
             .await
             .unwrap();
         sleep(Duration::from_millis(200));
