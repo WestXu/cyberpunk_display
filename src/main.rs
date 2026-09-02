@@ -147,9 +147,13 @@ async fn main() {
 
             let mut flip = false;
             loop {
-                let price = drain_stream_or_wait(&mut ws_coin)
-                    .await
-                    .expect("WebSocket closed unexpectedly");
+                let price = tokio::select! {
+                    biased;
+                    _ = tokio::signal::ctrl_c() => break,
+                    price = drain_stream_or_wait(&mut ws_coin) => {
+                        price.expect("WebSocket closed unexpectedly")
+                    }
+                };
 
                 log::debug!("Received price: {price:?}");
                 let mut msg: NixieMsg = price.price.into();

@@ -105,6 +105,12 @@ impl Nixie {
     }
 }
 
+impl Drop for Nixie {
+    fn drop(&mut self) {
+        self.close();
+    }
+}
+
 #[test]
 fn test_float_to_bytes() {
     use rust_decimal_macros::dec;
