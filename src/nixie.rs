@@ -66,6 +66,25 @@ pub struct Nixie {
     ser: Box<dyn SerialPort>,
 }
 
+/// Poll until the Nixie is plugged in (and not already claimed by another instance).
+pub async fn wait_for_device() -> Nixie {
+    let mut warned = false;
+    loop {
+        match Nixie::new() {
+            Ok(nixie) => return nixie,
+            Err(e) => {
+                if warned {
+                    log::debug!("Waiting for Nixie: {e:#}");
+                } else {
+                    log::warn!("Waiting for Nixie: {e:#}");
+                    warned = true;
+                }
+                tokio::time::sleep(Duration::from_secs(2)).await;
+            }
+        }
+    }
+}
+
 impl Nixie {
     pub fn new() -> Result<Self> {
         let port = find_port()?;
@@ -80,15 +99,14 @@ impl Nixie {
     pub async fn send(&mut self, bytes: NixieMsg) -> std::io::Result<()> {
         self.ser.write_all(&bytes.bytes)?;
         tokio::time::sleep(Duration::from_millis(50)).await;
-        log::info!("Sent to Nixie: {}", bytes.num);
+        log::trace!("Sent to Nixie: {}", bytes.num);
         Ok(())
     }
-    pub fn set_brightness(&mut self, b: u8) {
+    pub fn set_brightness(&mut self, b: u8) -> std::io::Result<()> {
         assert!(b <= 8, "brightness should be between (0, 8)");
-        self.ser
-            .write_all(format!("TIMB{b}").as_bytes())
-            .unwrap_or_else(|_| panic!("failed to set brightness to {b}"));
+        self.ser.write_all(format!("TIMB{b}").as_bytes())?;
         log::info!("Set Nixie brightness to {b}");
+        Ok(())
     }
     fn close(&mut self) {
         if let Err(e) = self.ser.write_all("TIMDBBBBBBBBBBBB".as_bytes()) {
@@ -130,7 +148,7 @@ async fn test_nixie() {
     use std::thread::sleep;
 
     let mut nixie = Nixie::new().unwrap();
-    nixie.set_brightness(8);
+    nixie.set_brightness(8).unwrap();
     for p in 0..=9 {
         nixie
             .send((Decimal::from(p) * dec!(11111.1)).into())
@@ -142,7 +160,7 @@ async fn test_nixie() {
     (0..=8)
         .rev()
         .map(|b| {
-            nixie.set_brightness(b);
+            nixie.set_brightness(b).unwrap();
             sleep(Duration::from_millis(200));
         })
         .for_each(drop);

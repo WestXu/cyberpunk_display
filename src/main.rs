@@ -71,6 +71,49 @@ struct Nixie {
     brightness: u8,
 }
 
+#[cfg(feature = "nixie")]
+async fn run_nixie(brightness: u8) {
+    use cyberpunk_display::nixie::NixieMsg;
+
+    loop {
+        let mut nixie = tokio::select! {
+            biased;
+            _ = tokio::signal::ctrl_c() => return,
+            nixie = nixie::wait_for_device() => nixie,
+        };
+        if let Err(e) = nixie.set_brightness(brightness) {
+            log::error!("Failed to set brightness, retrying: {e}");
+            continue;
+        }
+
+        let mut ws_coin = WsCoin::default().await;
+        let ws_coin_stream = ws_coin.subscribe();
+        tokio::pin!(ws_coin_stream);
+
+        let mut flip = false;
+        loop {
+            let price = tokio::select! {
+                biased;
+                _ = tokio::signal::ctrl_c() => return,
+                price = drain_stream_or_wait(&mut ws_coin_stream) => {
+                    price.expect("WebSocket closed unexpectedly")
+                }
+            };
+
+            log::trace!("Received price: {price:?}");
+            let mut msg: NixieMsg = price.price.into();
+            flip = !flip;
+            if flip {
+                msg.flip_first_decimal_point()
+            };
+            if let Err(e) = nixie.send(msg).await {
+                log::error!("Failed to send to Nixie: {e}");
+                break;
+            }
+        }
+    }
+}
+
 #[tokio::main]
 async fn main() {
     {
@@ -134,36 +177,6 @@ async fn main() {
             }
         }
         #[cfg(feature = "nixie")]
-        SubCommand::Nixie(n) => {
-            use cyberpunk_display::nixie::NixieMsg;
-
-            let mut nixie = nixie::Nixie::new().unwrap();
-            nixie.set_brightness(n.brightness);
-            let mut ws_coin = WsCoin::default().await;
-            let ws_coin = ws_coin.subscribe();
-            tokio::pin!(ws_coin);
-
-            let mut flip = false;
-            loop {
-                let price = tokio::select! {
-                    biased;
-                    _ = tokio::signal::ctrl_c() => break,
-                    price = drain_stream_or_wait(&mut ws_coin) => {
-                        price.expect("WebSocket closed unexpectedly")
-                    }
-                };
-
-                log::debug!("Received price: {price:?}");
-                let mut msg: NixieMsg = price.price.into();
-                flip = !flip;
-                if flip {
-                    msg.flip_first_decimal_point()
-                };
-                if let Err(e) = nixie.send(msg).await {
-                    log::error!("Failed to send to Nixie, exiting: {e}");
-                    break;
-                }
-            }
-        }
+        SubCommand::Nixie(n) => run_nixie(n.brightness).await,
     }
 }

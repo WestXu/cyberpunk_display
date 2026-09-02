@@ -1,0 +1,27 @@
+version: '3'
+
+vars:
+  LABEL: com.westxu.cyberpunk-display-nixie
+  HOME_DIR:
+    sh: echo $HOME
+  PLIST: '{{.HOME_DIR}}/Library/LaunchAgents/{{.LABEL}}.plist'
+  BIN: '{{.HOME_DIR}}/.cargo/bin/cyberpunk_display'
+
+tasks:
+  install-nixie:
+    desc: Build, install and load the Nixie LaunchAgent so it starts at login
+    cmds:
+      - task: uninstall-nixie
+      - cargo install --path . --features nixie
+      - mkdir -p tmp "$HOME/Library/LaunchAgents"
+      - >-
+        sed -e 's|@LABEL@|{{.LABEL}}|g' -e 's|@BIN@|{{.BIN}}|g'
+        -e 's|@WORKDIR@|{{.ROOT_DIR}}|g' launchd/nixie.plist.in > "{{.PLIST}}"
+      - launchctl bootstrap gui/$(id -u) "{{.PLIST}}"
+
+  uninstall-nixie:
+    desc: Remove everything this repo installed on the system
+    cmds:
+      - launchctl bootout gui/$(id -u)/{{.LABEL}} || true
+      - rm -f "{{.PLIST}}"
+      - cargo uninstall cyberpunk_display || true
