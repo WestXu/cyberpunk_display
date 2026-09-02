@@ -82,13 +82,11 @@ impl Nixie {
                 .expect("Failed to open port"),
         }
     }
-    pub async fn send(&mut self, bytes: NixieMsg) {
-        if let Err(e) = self.ser.write_all(&bytes.bytes) {
-            log::error!("Failed to send to Nixie: {}", e);
-            return;
-        }
+    pub async fn send(&mut self, bytes: NixieMsg) -> std::io::Result<()> {
+        self.ser.write_all(&bytes.bytes)?;
         tokio::time::sleep(Duration::from_millis(50)).await;
         log::info!("Sent to Nixie: {}", bytes.num);
+        Ok(())
     }
     pub fn set_brightness(&mut self, b: u8) {
         assert!(b <= 8, "brightness should be between (0, 8)");
@@ -97,10 +95,11 @@ impl Nixie {
             .unwrap_or_else(|_| panic!("failed to set brightness to {b}"));
         log::info!("Set Nixie brightness to {b}");
     }
-    pub fn close(&mut self) {
-        self.ser
-            .write_all("TIMDBBBBBBBBBBBB".as_bytes())
-            .expect("Failed to close");
+    fn close(&mut self) {
+        if let Err(e) = self.ser.write_all("TIMDBBBBBBBBBBBB".as_bytes()) {
+            log::error!("Failed to close Nixie: {e}");
+            return;
+        }
         log::info!("Closed Nixie");
     }
 }
@@ -144,7 +143,8 @@ async fn test_nixie() {
     for p in 0..=9 {
         nixie
             .send(decimal_to_bytes(Decimal::from(p) * dec!(11111.1)))
-            .await;
+            .await
+            .unwrap();
         sleep(Duration::from_millis(200));
     }
 
@@ -156,6 +156,6 @@ async fn test_nixie() {
         })
         .for_each(drop);
 
-    nixie.close();
+    drop(nixie);
     sleep(Duration::from_millis(200));
 }
