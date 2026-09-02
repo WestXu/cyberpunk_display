@@ -67,8 +67,6 @@ struct Awtrix {
 #[cfg(feature = "nixie")]
 #[derive(Parser, Debug)]
 struct Nixie {
-    #[clap(short, long, default_value = "/dev/ttyUSB0")]
-    serial_port: String,
     #[clap(short, long, default_value = "8")]
     brightness: u8,
 }
@@ -139,7 +137,7 @@ async fn main() {
         SubCommand::Nixie(n) => {
             use cyberpunk_display::nixie::NixieMsg;
 
-            let mut nixie = nixie::Nixie::new(n.serial_port);
+            let mut nixie = nixie::Nixie::new().unwrap();
             nixie.set_brightness(n.brightness);
             let mut ws_coin = WsCoin::default().await;
             let ws_coin = ws_coin.subscribe();

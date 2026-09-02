@@ -1,5 +1,6 @@
+use anyhow::{Context as _, Result};
 use rust_decimal::prelude::*;
-use serialport::SerialPort;
+use serialport::{SerialPort, SerialPortType};
 use std::io::Write;
 use std::time::Duration;
 
@@ -69,18 +70,39 @@ pub fn decimal_to_bytes(num: Decimal) -> NixieMsg {
     num.into()
 }
 
+/// The CH340 USB-to-serial bridge the Nixie tube is wired behind.
+const USB_VID: u16 = 0x1a86;
+const USB_PID: u16 = 0x7523;
+
+fn find_port() -> Result<String> {
+    let ports = serialport::available_ports().context("failed to enumerate serial ports")?;
+    ports
+        .into_iter()
+        .find(|p| {
+            // macOS exposes both a callout (/dev/cu.*) and a dialin (/dev/tty.*) node per
+            // device; opening the dialin one blocks until DCD is asserted.
+            !p.port_name.starts_with("/dev/tty.")
+                && matches!(&p.port_type, SerialPortType::UsbPort(usb)
+                    if usb.vid == USB_VID && usb.pid == USB_PID)
+        })
+        .map(|p| p.port_name)
+        .with_context(|| format!("no Nixie found at USB {USB_VID:04x}:{USB_PID:04x}"))
+}
+
 pub struct Nixie {
     ser: Box<dyn SerialPort>,
 }
 
 impl Nixie {
-    pub fn new(serialport: String) -> Self {
-        Nixie {
-            ser: serialport::new(serialport, 9600)
+    pub fn new() -> Result<Self> {
+        let port = find_port()?;
+        log::info!("Found Nixie at {port}");
+        Ok(Nixie {
+            ser: serialport::new(&port, 9600)
                 .timeout(Duration::from_millis(100))
                 .open()
-                .expect("Failed to open port"),
-        }
+                .with_context(|| format!("failed to open {port}"))?,
+        })
     }
     pub async fn send(&mut self, bytes: NixieMsg) -> std::io::Result<()> {
         self.ser.write_all(&bytes.bytes)?;
@@ -125,20 +147,12 @@ fn test_float_to_bytes() {
     assert_eq!(NixieMsg::from(dec!(999999.5)).bytes, *b"TIMD100000BBBBBB");
 }
 
-#[test]
-fn list_serial_port() {
-    let ports = serialport::available_ports().expect("No ports found!");
-    for p in ports {
-        log::info!("{}", p.port_name);
-    }
-}
-
 #[tokio::test]
 async fn test_nixie() {
     use rust_decimal_macros::dec;
     use std::thread::sleep;
 
-    let mut nixie = Nixie::new("/dev/ttyUSB0".to_owned());
+    let mut nixie = Nixie::new().unwrap();
     nixie.set_brightness(8);
     for p in 0..=9 {
         nixie
